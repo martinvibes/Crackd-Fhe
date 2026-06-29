@@ -1,0 +1,37 @@
+# --- Hardhat / fhEVM ---
+artifacts/
+cache/
+typechain-types/
+
+# --- Node ---
+node_modules/
+dist/
+build/
+.vite/
+coverage/
+*.log
+npm-debug.log*
+
+# --- Env / secrets ---
+.env
+.env.local
+.env.*.local
+*.secret
+*.pem
+
+# --- OS / editor ---
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# --- Deploy artifacts: keep the example, ignore real address books ---
+contracts/deployments/sepolia.json
+contracts/deployments/mainnet.json
+contracts/deployments/localhost.json
+
+/docs
+
+.claude
+/.claude
+.claude/settings.json

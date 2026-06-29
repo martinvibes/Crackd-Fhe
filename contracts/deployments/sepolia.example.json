@@ -1,0 +1,14 @@
+{
+  "network": "sepolia",
+  "admin": "0xYOUR_ADMIN_ADDRESS",
+  "deployedAt": "",
+  "tokens": {
+    "USDC": "0xUSDC_ERC20_ADDRESS_ON_SEPOLIA",
+    "WETH": "0xWETH_ERC20_ADDRESS_ON_SEPOLIA"
+  },
+  "contracts": {
+    "crackd_fhe": "0xDEPLOYED_CRACKD_FHE_ADDRESS",
+    "crackd_duel": "0xDEPLOYED_CRACKD_DUEL_ADDRESS",
+    "crackd_vault": "0xDEPLOYED_CRACKD_VAULT_ADDRESS"
+  }
+}
