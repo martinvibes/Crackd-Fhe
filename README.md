@@ -216,9 +216,11 @@ cd contracts
 cp .env.example .env             # set SEPOLIA_RPC_URL + ADMIN_PRIVATE_KEY
 npm run compile && npm test      # compile + run the test suite
 npm run deploy:sepolia           # writes deployments/sepolia.json
+cd .. && node scripts/sync-addresses.mjs   # writes addresses into both .env.local files
 ```
 
-Copy the three deployed addresses into the backend and frontend env files.
+(Set `USDC_ADDRESS` / `WETH_ADDRESS` + their `VITE_` variants to real Sepolia
+ERC-20s for staking — those aren't auto-deployed on testnet.)
 
 ### 3. Configure & run
 
