@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import PlayLayout from "./components/PlayLayout";
 import Home from "./pages/Home";
 import Game from "./pages/Game";
+import Confidential from "./pages/Confidential";
 import Leaderboard from "./pages/Leaderboard";
 import Logos from "./pages/Logos";
 import Profile from "./pages/Profile";
@@ -40,6 +41,7 @@ export default function App() {
         {/* Everything else gets the game-app chrome with floating bottom tab bar. */}
         <Route element={<PlayLayout />}>
           <Route path="/play" element={<Game />} />
+          <Route path="/confidential" element={<Confidential />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/profile" element={<Profile />} />
         </Route>

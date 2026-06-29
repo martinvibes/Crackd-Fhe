@@ -50,6 +50,7 @@ export default function Home() {
       <Nav />
 
       <Hero weth={weth} usdc={usdc} />
+      <ConfidentialBanner />
       <HowItPlays />
       <Modes />
       <Marquee />
@@ -80,6 +81,7 @@ function Nav() {
         </Link>
         <div className="flex items-center gap-6 text-[11px] uppercase tracking-[0.25em] text-white/60">
           <Link to="/play" className="hidden md:inline hover:text-white transition-colors">Play</Link>
+          <Link to="/confidential" className="hidden md:inline transition-colors" style={{ color: HOT }}>Confidential</Link>
           <Link to="/leaderboard" className="hidden md:inline hover:text-white transition-colors">Winners</Link>
           <WalletButton />
         </div>
@@ -187,11 +189,11 @@ function Hero({ weth, usdc }: { weth: number; usdc: number }) {
               </span>
             </Link>
             <Link
-              to="/leaderboard"
+              to="/confidential"
               className="text-sm text-white/70 hover:text-white underline underline-offset-[6px]"
               style={{ textDecorationColor: `${HOT}60` }}
             >
-              See winners
+              🔒 Play Confidential
             </Link>
           </motion.div>
 
@@ -399,6 +401,70 @@ function SafeDial() {
             : "4 / 4 — you set a code"}
       </div>
     </div>
+  );
+}
+
+// ============================================================
+// Confidential (FHE) banner — the differentiator, front and centre
+// ============================================================
+
+function ConfidentialBanner() {
+  return (
+    <section className="relative max-w-[1280px] mx-auto px-6 md:px-10">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-100px" }}
+        transition={{ duration: 0.7 }}
+        className="relative overflow-hidden rounded-3xl p-8 md:p-12"
+        style={{
+          border: `1px solid ${HOT}40`,
+          background:
+            "radial-gradient(120% 120% at 0% 0%, rgba(255,0,168,0.12), transparent 55%), rgba(255,255,255,0.02)",
+        }}
+      >
+        <div className="grid grid-cols-12 gap-6 items-center">
+          <div className="col-span-12 md:col-span-8">
+            <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.3em]" style={{ color: HOT }}>
+              <DotPulse /> New · Powered by Zama fhEVM
+            </div>
+            <h2
+              className="mt-4 font-semibold leading-[0.95] tracking-[-0.03em]"
+              style={{ fontSize: "clamp(32px, 4.5vw, 60px)" }}
+            >
+              The only code game where your code{" "}
+              <span style={{ color: HOT }}>stays encrypted</span> — even from the chain.
+            </h2>
+            <p className="mt-4 max-w-xl text-white/70 text-base md:text-lg">
+              Seal your secret as ciphertext on-chain. The contract scores every
+              guess <em>on the encrypted code</em> using Fully Homomorphic
+              Encryption — no trusted referee, no leaks, no ZK circuit.
+            </p>
+            <Link
+              to="/confidential"
+              className="group mt-8 inline-flex items-center gap-3 pl-6 pr-2 py-2 rounded-full text-sm font-semibold tracking-wide transition-transform hover:-translate-y-0.5"
+              style={{ background: HOT, color: INK, boxShadow: `0 20px 50px -20px ${HOT}` }}
+            >
+              🔒 Try Confidential mode
+              <span className="h-9 w-9 grid place-items-center rounded-full transition-transform group-hover:translate-x-0.5" style={{ background: INK, color: HOT }}>
+                →
+              </span>
+            </Link>
+          </div>
+          <div className="col-span-12 md:col-span-4 flex justify-center">
+            <div
+              className="relative grid place-items-center h-40 w-40 rounded-3xl"
+              style={{ border: `1px solid ${RULE}`, background: "rgba(255,0,168,0.04)" }}
+            >
+              <span style={{ fontSize: 64 }}>🔒</span>
+              <span className="absolute -bottom-3 px-3 py-1 rounded-full text-[10px] uppercase tracking-[0.2em] font-mono" style={{ background: INK, border: `1px solid ${HOT}40`, color: HOT }}>
+                euint8[4]
+              </span>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </section>
   );
 }
 

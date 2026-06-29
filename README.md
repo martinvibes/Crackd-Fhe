@@ -95,6 +95,35 @@ This is genuinely non-trivial FHE — not a confidential-ERC20 clone. The test s
 
 ---
 
+## Confidential mode — the showcase (`/confidential`)
+
+The headline feature lives at **`/confidential`**. It exercises `CrackdFHE`
+end-to-end against real Sepolia transactions:
+
+1. **Seal** — you pick a 4-digit code; it's encrypted to `euint8[4]` in your
+   browser and committed with `createGame()`. The code is ciphertext on-chain.
+2. **Crack** — The Vault (a client-side solver) proposes guesses; each is sent
+   to `submitGuess()`, where the **contract scores the POT/PAN pegs on the
+   encrypted code**. The encrypted result is decrypted only for you via the
+   relayer, then fed back to the solver.
+3. **Result** — the Vault cracks it or runs out of guesses. Throughout, your
+   digits never appear on-chain in the clear — every scoring tx is linkable on
+   Etherscan, and none of them reveal the code.
+
+The page includes a side-by-side **"normal game leaks vs. Crackd Confidential
+stays sealed"** panel and a plain-English "under the hood" breakdown — built for
+judges to grok the FHE property in ten seconds.
+
+### Demo script (90 seconds)
+
+1. Open `/confidential`, connect a wallet on Sepolia.
+2. Set a code (e.g. `5 8 3 1`) → **Seal on-chain**. Open the sealing tx on
+   Etherscan — show that the stored input is ciphertext, not the digits.
+3. Click **Score this guess on-chain** a few times. Each tx scores on the
+   encrypted code; the pegs (● POT / ○ PAN) come back decrypted just for you.
+4. Punchline: "The guesses and pegs are public. The code never was — not to the
+   opponent, not to the server, not to the chain itself."
+
 ## Architecture
 
 ```
