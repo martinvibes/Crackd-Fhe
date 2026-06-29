@@ -138,9 +138,10 @@ function ModalShell({
             className="pointer-events-none absolute -top-16 -right-16 h-40 w-40 rounded-full bg-accent/20 blur-3xl"
           />
           <button
+            type="button"
             onClick={onClose}
             aria-label="Close"
-            className="absolute right-4 top-4 grid h-7 w-7 place-items-center rounded-lg text-fg-muted hover:text-fg-primary hover:bg-ink-elevated transition-colors"
+            className="absolute right-4 top-4 z-20 grid h-7 w-7 cursor-pointer place-items-center rounded-lg text-fg-muted hover:text-fg-primary hover:bg-ink-elevated transition-colors"
           >
             <CloseGlyph />
           </button>
@@ -172,7 +173,7 @@ function PrivySection({ onChosen }: { onChosen: () => void }) {
   const { login, ready } = usePrivy();
   return (
     <button
-      className="w-full px-4 py-3.5 rounded-xl border border-accent/40 bg-accent/10 hover:border-accent/70 hover:bg-accent/15 transition-colors text-left disabled:opacity-50 disabled:cursor-wait flex items-center gap-3 group"
+      className="w-full px-4 py-3.5 rounded-xl border border-accent/40 bg-accent/10 hover:border-accent/70 hover:bg-accent/15 transition-colors text-left cursor-pointer disabled:opacity-50 disabled:cursor-wait flex items-center gap-3 group"
       disabled={!ready}
       onClick={() => {
         login();
@@ -341,7 +342,7 @@ function WalletList({
           {!showMore ? (
             <button
               onClick={() => setShowMore(true)}
-              className="w-full px-4 py-3 rounded-xl border border-dashed border-ink-border hover:border-accent/40 hover:bg-ink-elevated/50 transition-colors text-left flex items-center gap-3 group"
+              className="w-full px-4 py-3 rounded-xl border border-dashed border-ink-border hover:border-accent/40 hover:bg-ink-elevated/50 transition-colors text-left cursor-pointer flex items-center gap-3 group"
             >
               <span className="flex -space-x-2 shrink-0">
                 {notInstalled.slice(0, 3).map((opt) =>
@@ -373,7 +374,7 @@ function WalletList({
                 </span>
                 <button
                   onClick={() => setShowMore(false)}
-                  className="text-[11px] text-fg-muted hover:text-fg-secondary"
+                  className="text-[11px] text-fg-muted hover:text-fg-secondary cursor-pointer"
                 >
                   Show less
                 </button>
@@ -470,7 +471,7 @@ function WalletRow({
     <button
       disabled={disabled}
       onClick={onClick}
-      className={`w-full px-4 py-3 rounded-xl border bg-ink-elevated transition-colors text-left flex items-center gap-3 disabled:opacity-60 disabled:cursor-wait ${
+      className={`w-full px-4 py-3 rounded-xl border bg-ink-elevated transition-colors text-left flex items-center gap-3 cursor-pointer disabled:opacity-60 disabled:cursor-wait ${
         accent
           ? "border-accent/30 hover:border-accent/60"
           : "border-ink-border hover:border-accent/40"
