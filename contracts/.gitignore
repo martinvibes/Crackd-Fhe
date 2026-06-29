@@ -7,3 +7,6 @@ dist/
 .env.local
 coverage/
 coverage.json
+
+# fhEVM hardhat plugin temp artifacts
+fhevmTemp/

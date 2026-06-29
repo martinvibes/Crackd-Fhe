@@ -35,36 +35,60 @@ async function main() {
     console.log("MockERC20 USDC:", tokens.USDC, "WETH:", tokens.WETH);
   }
 
-  const FHE = await ethers.getContractFactory("CrackdFHE");
-  const fhe = await FHE.deploy();
-  await fhe.waitForDeployment();
-
-  const Duel = await ethers.getContractFactory("CrackdDuel");
-  const duel = await Duel.deploy(admin.address, MIN_STAKE);
-  await duel.waitForDeployment();
-
-  const Vault = await ethers.getContractFactory("CrackdVault");
-  const vault = await Vault.deploy(admin.address);
-  await vault.waitForDeployment();
-
-  const book = {
-    network: network.name,
-    admin: admin.address,
-    deployedAt: new Date().toISOString(),
-    tokens,
-    contracts: {
-      crackd_fhe: await fhe.getAddress(),
-      crackd_duel: await duel.getAddress(),
-      crackd_vault: await vault.getAddress(),
-    },
-  };
-
   const outDir = path.join(__dirname, "..", "deployments");
   mkdirSync(outDir, { recursive: true });
   const outFile = path.join(outDir, `${network.name}.json`);
-  writeFileSync(outFile, JSON.stringify(book, null, 2));
-  console.log("Wrote", outFile);
-  console.log(JSON.stringify(book, null, 2));
+
+  // Resilient, incremental: record each address as soon as it lands so an
+  // out-of-gas failure on a later contract never loses an earlier deploy.
+  const contracts: Record<string, string> = {};
+  const book = () => ({
+    network: network.name,
+    admin: admin.address,
+    tokens,
+    contracts,
+  });
+  const flush = () => writeFileSync(outFile, JSON.stringify(book(), null, 2));
+
+  async function deploy(label: string, key: string, factory: string, args: unknown[]) {
+    try {
+      const f = await ethers.getContractFactory(factory);
+      const c = await f.deploy(...args);
+      await c.waitForDeployment();
+      contracts[key] = await c.getAddress();
+      flush();
+      console.log(`✔ ${label}: ${contracts[key]}`);
+    } catch (e) {
+      console.error(`x ${label} failed: ${(e as Error).message.split("\n")[0]}`);
+      throw e;
+    }
+  }
+
+  // CrackdFHE first — it's the only contract the Confidential showcase needs.
+  let failed = false;
+  for (const step of [
+    { label: "CrackdFHE", key: "crackd_fhe", factory: "CrackdFHE", args: [] as unknown[] },
+    { label: "CrackdDuel", key: "crackd_duel", factory: "CrackdDuel", args: [admin.address, MIN_STAKE] },
+    { label: "CrackdVault", key: "crackd_vault", factory: "CrackdVault", args: [admin.address] },
+  ]) {
+    if (failed) {
+      console.log(`↷ skipping ${step.label} (a prior deploy failed — likely out of gas)`);
+      continue;
+    }
+    try {
+      await deploy(step.label, step.key, step.factory, step.args);
+    } catch {
+      failed = true;
+    }
+  }
+
+  console.log("\nWrote", outFile);
+  console.log(JSON.stringify(book(), null, 2));
+  if (failed) {
+    console.log(
+      "\nSome contracts didn't deploy (top up the deployer with Sepolia ETH and re-run).",
+    );
+  }
 }
 
 main().catch((e) => {

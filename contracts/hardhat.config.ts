@@ -28,6 +28,9 @@ const config: HardhatUserConfig = {
       url: SEPOLIA_RPC_URL,
       accounts: ADMIN_PRIVATE_KEY ? [ADMIN_PRIVATE_KEY] : [],
       chainId: 11155111,
+      // Cap the gas price so the upfront balance requirement stays low on a
+      // lightly-funded deployer. Override with GAS_PRICE_GWEI if Sepolia spikes.
+      gasPrice: Math.round(Number(process.env.GAS_PRICE_GWEI || "55") * 1e9),
     },
   },
 };
