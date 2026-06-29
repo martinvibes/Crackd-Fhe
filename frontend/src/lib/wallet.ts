@@ -43,18 +43,25 @@ export interface KnownWallet {
   name: string;
   downloadUrl: string;
   brand: string;
+  /** Domain used to resolve a real brand logo from a favicon service. */
+  domain: string;
 }
 export const KNOWN_WALLETS: KnownWallet[] = [
-  { rdns: "io.metamask", name: "MetaMask", downloadUrl: "https://metamask.io/download/", brand: "#f6851b" },
-  { rdns: "com.coinbase.wallet", name: "Coinbase Wallet", downloadUrl: "https://www.coinbase.com/wallet/downloads", brand: "#0052ff" },
-  { rdns: "io.rabby", name: "Rabby", downloadUrl: "https://rabby.io/", brand: "#7084ff" },
-  { rdns: "com.trustwallet.app", name: "Trust Wallet", downloadUrl: "https://trustwallet.com/download", brand: "#3375bb" },
-  { rdns: "com.okex.wallet", name: "OKX Wallet", downloadUrl: "https://www.okx.com/web3", brand: "#000000" },
-  { rdns: "me.rainbow", name: "Rainbow", downloadUrl: "https://rainbow.me/", brand: "#001e59" },
-  { rdns: "com.brave.wallet", name: "Brave Wallet", downloadUrl: "https://brave.com/wallet/", brand: "#fb542b" },
-  { rdns: "app.phantom", name: "Phantom", downloadUrl: "https://phantom.app/download", brand: "#ab9ff2" },
-  { rdns: "io.zerion.wallet", name: "Zerion", downloadUrl: "https://zerion.io/", brand: "#2962ef" },
+  { rdns: "io.metamask", name: "MetaMask", downloadUrl: "https://metamask.io/download/", brand: "#f6851b", domain: "metamask.io" },
+  { rdns: "com.coinbase.wallet", name: "Coinbase Wallet", downloadUrl: "https://www.coinbase.com/wallet/downloads", brand: "#0052ff", domain: "coinbase.com" },
+  { rdns: "io.rabby", name: "Rabby", downloadUrl: "https://rabby.io/", brand: "#7084ff", domain: "rabby.io" },
+  { rdns: "com.trustwallet.app", name: "Trust Wallet", downloadUrl: "https://trustwallet.com/download", brand: "#3375bb", domain: "trustwallet.com" },
+  { rdns: "com.okex.wallet", name: "OKX Wallet", downloadUrl: "https://www.okx.com/web3", brand: "#111111", domain: "okx.com" },
+  { rdns: "me.rainbow", name: "Rainbow", downloadUrl: "https://rainbow.me/", brand: "#001e59", domain: "rainbow.me" },
+  { rdns: "com.brave.wallet", name: "Brave Wallet", downloadUrl: "https://brave.com/wallet/", brand: "#fb542b", domain: "brave.com" },
+  { rdns: "app.phantom", name: "Phantom", downloadUrl: "https://phantom.app/download", brand: "#ab9ff2", domain: "phantom.app" },
+  { rdns: "io.zerion.wallet", name: "Zerion", downloadUrl: "https://zerion.io/", brand: "#2962ef", domain: "zerion.io" },
 ];
+
+/** Real brand logo for a known wallet, via a no-auth favicon service. */
+export function walletIconUrl(domain: string): string {
+  return `https://icons.duckduckgo.com/ip3/${domain}.ico`;
+}
 
 type Eip1193WithRequest = Eip1193Provider & {
   request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;

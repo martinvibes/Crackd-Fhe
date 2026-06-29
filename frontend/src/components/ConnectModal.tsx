@@ -20,13 +20,14 @@ import {
   discoverWallets,
   describeWalletError,
   KNOWN_WALLETS,
+  walletIconUrl,
   type DiscoveredWallet,
 } from "../lib/wallet";
 import { walletConnectEnabled } from "../lib/walletconnect";
 
 type WalletOption =
   | { type: "injected"; key: string; name: string; icon: string; brand?: string; wallet: DiscoveredWallet }
-  | { type: "install"; key: string; name: string; brand: string; downloadUrl: string }
+  | { type: "install"; key: string; name: string; brand: string; downloadUrl: string; domain: string }
   | { type: "walletconnect"; key: "walletconnect"; name: string };
 
 export function ConnectModal({
@@ -189,7 +190,7 @@ function PrivySection({ onChosen }: { onChosen: () => void }) {
           Continue with email or social
         </span>
         <span className="block text-xs text-fg-muted mt-0.5">
-          Email · Google · Apple — no wallet install
+          Email · Google · Apple — no install
         </span>
       </span>
       <Chevron />
@@ -216,12 +217,14 @@ function WalletList({
   const connectWalletConnect = useWalletStore((s) => s.connectWalletConnect);
   const [wallets, setWallets] = useState<DiscoveredWallet[] | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [showMore, setShowMore] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     let alive = true;
     setWallets(null);
     setBusyKey(null);
+    setShowMore(false);
     discoverWallets().then((w) => {
       if (alive) setWallets(w);
     });
@@ -245,7 +248,7 @@ function WalletList({
         installed.push({ type: "injected", key: k.rdns, name: k.name, icon: found.info.icon, brand: k.brand, wallet: found });
         seen.add(k.rdns);
       } else {
-        notInstalled.push({ type: "install", key: k.rdns, name: k.name, brand: k.brand, downloadUrl: k.downloadUrl });
+        notInstalled.push({ type: "install", key: k.rdns, name: k.name, brand: k.brand, downloadUrl: k.downloadUrl, domain: k.domain });
       }
     }
     // Installed wallets we don't have in the curated list (incl. legacy fallback).
@@ -332,36 +335,115 @@ function WalletList({
         />
       )}
 
-      {/* Not installed — link to install */}
+      {/* Not installed — collapsed behind a "+N more" toggle */}
       {notInstalled.length > 0 && (
-        <>
-          <div className="pt-2 pb-1 text-[10px] uppercase tracking-[0.2em] text-fg-muted">
-            Don’t have one yet
-          </div>
-          {notInstalled.map((opt) =>
-            opt.type === "install" ? (
-              <a
-                key={opt.key}
-                href={opt.downloadUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="w-full px-4 py-2.5 rounded-xl border border-ink-border/60 bg-ink-elevated/50 hover:bg-ink-elevated hover:border-ink-border transition-colors text-left flex items-center gap-3 group"
-              >
-                <LetterTile name={opt.name} brand={opt.brand} />
-                <span className="flex-1 min-w-0">
-                  <span className="block text-sm font-medium text-fg-secondary group-hover:text-fg-primary truncate">
-                    {opt.name}
-                  </span>
+        <div className="pt-1">
+          {!showMore ? (
+            <button
+              onClick={() => setShowMore(true)}
+              className="w-full px-4 py-3 rounded-xl border border-dashed border-ink-border hover:border-accent/40 hover:bg-ink-elevated/50 transition-colors text-left flex items-center gap-3 group"
+            >
+              <span className="flex -space-x-2 shrink-0">
+                {notInstalled.slice(0, 3).map((opt) =>
+                  opt.type === "install" ? (
+                    <span
+                      key={opt.key}
+                      className="grid place-items-center h-7 w-7 rounded-full ring-2 ring-ink-elevated overflow-hidden bg-ink-raised"
+                    >
+                      <WalletIcon
+                        domain={opt.domain}
+                        name={opt.name}
+                        brand={opt.brand}
+                        size="sm"
+                      />
+                    </span>
+                  ) : null,
+                )}
+              </span>
+              <span className="flex-1 text-sm font-medium text-fg-secondary group-hover:text-fg-primary">
+                +{notInstalled.length} more wallets
+              </span>
+              <Chevron />
+            </button>
+          ) : (
+            <div className="space-y-2 animate-fade-in">
+              <div className="flex items-center justify-between pb-1">
+                <span className="text-[10px] uppercase tracking-[0.2em] text-fg-muted">
+                  Don’t have one yet
                 </span>
-                <span className="text-[11px] text-fg-muted group-hover:text-fg-secondary">
-                  Install ↗
-                </span>
-              </a>
-            ) : null,
+                <button
+                  onClick={() => setShowMore(false)}
+                  className="text-[11px] text-fg-muted hover:text-fg-secondary"
+                >
+                  Show less
+                </button>
+              </div>
+              {notInstalled.map((opt) =>
+                opt.type === "install" ? (
+                  <a
+                    key={opt.key}
+                    href={opt.downloadUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-full px-4 py-2.5 rounded-xl border border-ink-border/60 bg-ink-elevated/50 hover:bg-ink-elevated hover:border-ink-border transition-colors text-left flex items-center gap-3 group"
+                  >
+                    <span className="grid place-items-center w-9 h-9 rounded-lg bg-ink-raised overflow-hidden shrink-0">
+                      <WalletIcon domain={opt.domain} name={opt.name} brand={opt.brand} />
+                    </span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-sm font-medium text-fg-secondary group-hover:text-fg-primary truncate">
+                        {opt.name}
+                      </span>
+                    </span>
+                    <span className="text-[11px] text-fg-muted group-hover:text-fg-secondary">
+                      Install ↗
+                    </span>
+                  </a>
+                ) : null,
+              )}
+            </div>
           )}
-        </>
+        </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Wallet brand logo: tries the real favicon, falls back to a coloured letter
+ * tile if it 404s or is blocked.
+ */
+function WalletIcon({
+  domain,
+  name,
+  brand,
+  size = "md",
+}: {
+  domain: string;
+  name: string;
+  brand: string;
+  size?: "sm" | "md";
+}) {
+  const [failed, setFailed] = useState(false);
+  const px = size === "sm" ? "h-5 w-5" : "h-6 w-6";
+  if (failed) {
+    return (
+      <span
+        aria-hidden
+        className={`grid place-items-center ${size === "sm" ? "h-7 w-7 text-[10px]" : "h-9 w-9 text-xs"} font-semibold text-white/90`}
+        style={{ background: brand }}
+      >
+        {name.slice(0, 1)}
+      </span>
+    );
+  }
+  return (
+    <img
+      src={walletIconUrl(domain)}
+      alt=""
+      className={`${px} object-contain`}
+      onError={() => setFailed(true)}
+    />
   );
 }
 
@@ -409,18 +491,6 @@ function WalletRow({
       </span>
       {busy ? <Spinner /> : <Chevron />}
     </button>
-  );
-}
-
-function LetterTile({ name, brand }: { name: string; brand: string }) {
-  return (
-    <span
-      aria-hidden
-      className="grid place-items-center w-9 h-9 rounded-lg shrink-0 text-xs font-semibold text-white/90"
-      style={{ background: `${brand}` }}
-    >
-      {name.slice(0, 1)}
-    </span>
   );
 }
 
