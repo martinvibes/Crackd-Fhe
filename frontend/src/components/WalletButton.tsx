@@ -37,16 +37,16 @@ export default function WalletButton() {
 
   const kindBadge =
     kind === "privy" ? (
-      <span aria-label="email-wallet" title="Email login (Privy)" className="text-xs">
-        ✉
+      <span aria-label="email-wallet" title="Email login (Privy)" className="text-fg-secondary inline-flex">
+        <MailGlyph />
       </span>
     ) : kind === "walletconnect" ? (
-      <span aria-label="walletconnect" title="WalletConnect" className="text-xs">
-        🔗
+      <span aria-label="walletconnect" title="WalletConnect" className="text-fg-secondary inline-flex">
+        <LinkGlyph />
       </span>
     ) : (
-      <span aria-label="crypto-wallet" title="Crypto wallet" className="text-xs">
-        ⌬
+      <span aria-label="crypto-wallet" title="Crypto wallet" className="text-fg-secondary inline-flex">
+        <WalletGlyph />
       </span>
     );
 
@@ -218,6 +218,34 @@ function AddressRow({ address }: { address: string }) {
         {copied ? "Copied" : "Copy"}
       </span>
     </button>
+  );
+}
+
+function MailGlyph() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <rect x="3.5" y="5.5" width="17" height="13" rx="2" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M4 7l8 5 8-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function LinkGlyph() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M10 14a4 4 0 005.66 0l2.84-2.84a4 4 0 10-5.66-5.66L11.5 6.9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M14 10a4 4 0 00-5.66 0L5.5 12.84a4 4 0 105.66 5.66L12.5 17.1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function WalletGlyph() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <rect x="3" y="6" width="18" height="13" rx="2" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M3 9h13a2 2 0 012 2v3a2 2 0 01-2 2H3" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="16" cy="12.5" r="1.2" fill="currentColor" />
+    </svg>
   );
 }
 

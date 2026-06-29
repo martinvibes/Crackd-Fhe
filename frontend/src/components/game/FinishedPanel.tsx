@@ -197,8 +197,8 @@ export function FinishedPanel({
           className="btn-ghost"
           onClick={() => {
             const text = won
-              ? `I just crackd The Vault in ${yourGuesses} guesses on Crackd. Come catch me 🔐`
-              : `I just went down to The Vault — but only ${theirGuesses} guesses in. Your turn to try 🔐`;
+              ? `I just crackd The Vault in ${yourGuesses} guesses on Crackd. Come catch me`
+              : `I just went down to The Vault — but only ${theirGuesses} guesses in. Your turn to try`;
             navigator.clipboard.writeText(text);
           }}
         >

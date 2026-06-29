@@ -301,9 +301,15 @@ function SetCard({
       <button
         onClick={onSeal}
         disabled={busy}
-        className="btn-primary mt-6 w-full cursor-pointer disabled:cursor-wait"
+        className="btn-primary mt-6 w-full cursor-pointer disabled:cursor-wait inline-flex items-center justify-center gap-2"
       >
-        {busy ? status ?? "Sealing…" : "🔒 Seal on-chain"}
+        {busy ? (
+          status ?? "Sealing…"
+        ) : (
+          <>
+            <LockIcon /> Seal on-chain
+          </>
+        )}
       </button>
     </div>
   );
@@ -465,8 +471,16 @@ function ResultCard({
     <div
       className={`panel-elevated p-6 ${win ? "border-accent/40" : "border-ink-border"}`}
     >
-      <div className="text-3xl font-semibold">
-        {win ? "Your code held. 🛡️" : "The Vault cracked it. 🔓"}
+      <div className="text-3xl font-semibold inline-flex items-center gap-2.5">
+        {win ? (
+          <>
+            <ShieldIcon /> Your code held.
+          </>
+        ) : (
+          <>
+            The Vault cracked it. <UnlockIcon />
+          </>
+        )}
       </div>
       <p className="mt-2 text-fg-secondary">
         {win
@@ -615,6 +629,25 @@ function LockIcon({ large }: { large?: boolean }) {
     >
       <rect x="4" y="10" width="16" height="10" rx="2" stroke="currentColor" strokeWidth="1.6" />
       <path d="M8 10V7a4 4 0 018 0v3" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="12" cy="15" r="1.4" fill="currentColor" />
+    </svg>
+  );
+}
+
+function ShieldIcon() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden className="text-accent shrink-0">
+      <path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+      <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function UnlockIcon() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden className="text-fg-secondary shrink-0">
+      <rect x="4" y="10" width="16" height="10" rx="2" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M8 10V7a4 4 0 017.5-1.9" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
       <circle cx="12" cy="15" r="1.4" fill="currentColor" />
     </svg>
   );

@@ -9,6 +9,8 @@ import type { Asset } from "../../lib/api";
 import type { JoinPreview } from "../../pages/Game";
 import { BackLink } from "./BackLink";
 import { modeLabel, type Mode } from "./ModePicker";
+import { getActiveProvider } from "../../lib/wallet";
+import { mintTestTokens, tokenAddressFor } from "../../lib/evm";
 
 const STAKE_PRESETS = [1, 5, 10, 25] as const;
 
@@ -33,6 +35,54 @@ const MULTIPLIER_TIERS: Array<{
   { label: "Sharp", range: "4–5", factor: 1.25, total: "2.25×" },
   { label: "Base win", range: "6+", factor: 1.0, total: "2×" },
 ];
+
+/**
+ * Test-token faucet. On Sepolia the stake tokens are MockERC20s with a public
+ * mint(), so players can grab some to actually stake. One tap → tokens in wallet.
+ */
+function TokenFaucet({ asset, assets }: { asset: string; assets: Asset[] }) {
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const decimals = assets.find((a) => a.symbol === asset)?.decimals ?? 18;
+  const amount = asset.toUpperCase() === "USDC" ? 1000 : 10;
+
+  async function mint() {
+    setErr(null);
+    setBusy(true);
+    setDone(false);
+    try {
+      const token = tokenAddressFor(asset);
+      if (!token) throw new Error(`No ${asset} token configured`);
+      const provider = await getActiveProvider();
+      const signer = await provider.getSigner();
+      await mintTestTokens(signer, token, amount, decimals);
+      setDone(true);
+    } catch (e) {
+      setErr((e as Error).message?.slice(0, 120) ?? "Mint failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-3">
+      <div className="flex items-center justify-between gap-3 rounded-lg border border-ink-border bg-ink-elevated px-3 py-2">
+        <span className="text-xs text-fg-muted">
+          Need test {asset}? Mint {amount.toLocaleString()} free on Sepolia.
+        </span>
+        <button
+          onClick={mint}
+          disabled={busy}
+          className="text-xs font-medium text-accent hover:underline disabled:opacity-50 cursor-pointer whitespace-nowrap"
+        >
+          {busy ? "Minting…" : done ? "Minted" : `Get ${asset}`}
+        </button>
+      </div>
+      {err && <div className="mt-1 text-[11px] text-danger">{err}</div>}
+    </div>
+  );
+}
 
 export function SetupPanel({
   mode,
@@ -231,6 +281,10 @@ function VaultLockCard({
           </button>
         ))}
       </div>
+
+      {walletConnected && (
+        <TokenFaucet asset={asset} assets={assets} />
+      )}
 
       {/* Stake: preset chips + custom input */}
       <div className="mt-5 flex items-baseline justify-between">

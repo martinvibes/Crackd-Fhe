@@ -190,10 +190,10 @@ function Hero({ weth, usdc }: { weth: number; usdc: number }) {
             </Link>
             <Link
               to="/confidential"
-              className="text-sm text-white/70 hover:text-white underline underline-offset-[6px]"
+              className="text-sm text-white/70 hover:text-white underline underline-offset-[6px] inline-flex items-center gap-1.5"
               style={{ textDecorationColor: `${HOT}60` }}
             >
-              🔒 Play Confidential
+              <LockGlyph /> Play Confidential
             </Link>
           </motion.div>
 
@@ -445,7 +445,7 @@ function ConfidentialBanner() {
               className="group mt-8 inline-flex items-center gap-3 pl-6 pr-2 py-2 rounded-full text-sm font-semibold tracking-wide transition-transform hover:-translate-y-0.5"
               style={{ background: HOT, color: INK, boxShadow: `0 20px 50px -20px ${HOT}` }}
             >
-              🔒 Try Confidential mode
+              <LockGlyph /> Try Confidential mode
               <span className="h-9 w-9 grid place-items-center rounded-full transition-transform group-hover:translate-x-0.5" style={{ background: INK, color: HOT }}>
                 →
               </span>
@@ -456,7 +456,7 @@ function ConfidentialBanner() {
               className="relative grid place-items-center h-40 w-40 rounded-3xl"
               style={{ border: `1px solid ${RULE}`, background: "rgba(255,0,168,0.04)" }}
             >
-              <span style={{ fontSize: 64 }}>🔒</span>
+              <BigLock />
               <span className="absolute -bottom-3 px-3 py-1 rounded-full text-[10px] uppercase tracking-[0.2em] font-mono" style={{ background: INK, border: `1px solid ${HOT}40`, color: HOT }}>
                 euint8[4]
               </span>
@@ -465,6 +465,26 @@ function ConfidentialBanner() {
         </div>
       </motion.div>
     </section>
+  );
+}
+
+function LockGlyph() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden className="inline-block shrink-0">
+      <rect x="4" y="10" width="16" height="10" rx="2" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M8 10V7a4 4 0 018 0v3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <circle cx="12" cy="15" r="1.4" fill="currentColor" />
+    </svg>
+  );
+}
+
+function BigLock() {
+  return (
+    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" aria-hidden style={{ color: HOT }}>
+      <rect x="4" y="10" width="16" height="10" rx="2" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M8 10V7a4 4 0 018 0v3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <circle cx="12" cy="15" r="1.4" fill="currentColor" />
+    </svg>
   );
 }
 

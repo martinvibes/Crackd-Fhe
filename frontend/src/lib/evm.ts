@@ -14,6 +14,18 @@ import { Contract, parseUnits, formatUnits, type Signer } from "ethers";
 const DUEL_ADDRESS = import.meta.env.VITE_CRACKD_DUEL_ADDRESS as string;
 const VAULT_ADDRESS = import.meta.env.VITE_CRACKD_VAULT_ADDRESS as string;
 
+/** Resolve a stake-token symbol → its configured ERC-20 address (or null). */
+export function tokenAddressFor(symbol: string): string | null {
+  switch (symbol.toUpperCase()) {
+    case "WETH":
+      return (import.meta.env.VITE_WETH_ADDRESS as string) || null;
+    case "USDC":
+      return (import.meta.env.VITE_USDC_ADDRESS as string) || null;
+    default:
+      return null;
+  }
+}
+
 // --- ABI fragments ---
 
 const ERC20_ABI = [
@@ -57,6 +69,24 @@ export async function approveIfNeeded(
   if (current >= amount) return;
   const tx = await erc20.approve(spender, amount);
   await tx.wait();
+}
+
+// --- Test-token faucet (MockERC20.mint is public on testnet) ---
+
+const MINT_ABI = ["function mint(address to, uint256 amount)"];
+
+/** Mint test tokens to the connected wallet so it can stake. Returns tx hash. */
+export async function mintTestTokens(
+  signer: Signer,
+  token: string,
+  amountHuman: number,
+  decimals: number,
+): Promise<string> {
+  const to = await signer.getAddress();
+  const c = new Contract(token, MINT_ABI, signer);
+  const tx = await c.mint(to, parseUnits(String(amountHuman), decimals));
+  await tx.wait();
+  return tx.hash;
 }
 
 // --- CrackdDuel (staked PvP) ---
