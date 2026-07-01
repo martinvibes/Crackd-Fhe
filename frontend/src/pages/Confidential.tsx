@@ -12,6 +12,7 @@ import { useWalletStore } from "../store/walletStore";
 import { getActiveProvider } from "../lib/wallet";
 import { fheConfigured, scoreGuessOnChain, FHE_EXPLORER } from "../lib/fheGame";
 import WalletButton from "../components/WalletButton";
+import { Spinner } from "../components/Spinner";
 import { PlayBackground } from "../components/game/PlayBackground";
 import { Board } from "../components/game/board/Board";
 import type { SafeGameView } from "../lib/socket";
@@ -205,8 +206,9 @@ function StartScreen({
       <button
         onClick={onStart}
         disabled={busy}
-        className="btn-primary mt-7 cursor-pointer disabled:cursor-wait"
+        className="btn-primary mt-7 cursor-pointer disabled:cursor-wait inline-flex items-center justify-center gap-2"
       >
+        {busy && <Spinner />}
         {busy ? status ?? "Sealing the Vault…" : "Seal the Vault & play"}
       </button>
       {error && <div className="mt-4 text-sm text-danger">{error}</div>}
@@ -285,8 +287,9 @@ function GasChip({ address }: { address: string }) {
     <button
       onClick={go}
       disabled={state === "sending"}
-      className="text-xs font-medium text-accent hover:underline disabled:opacity-60 cursor-pointer whitespace-nowrap"
+      className="text-xs font-medium text-accent hover:underline disabled:opacity-60 cursor-pointer whitespace-nowrap inline-flex items-center gap-1.5"
     >
+      {state === "sending" && <Spinner size={12} />}
       {state === "sending" ? "Topping up…" : state === "done" ? "Gas topped up" : "Get test ETH"}
     </button>
   );

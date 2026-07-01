@@ -36,24 +36,31 @@ export function Board({
 }) {
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const scrollerRef = useRef<HTMLDivElement>(null);
 
   const needsToSetCode = view.status === "setting_codes" && !view.yourCode;
   const isYourTurn = view.currentTurn === view.you && view.status === "active";
 
   async function submit() {
+    if (submitting) return;
     const code = draft.replace(/\D/g, "").slice(0, 4);
     if (code.length !== 4) {
       setError("Enter 4 digits");
       return;
     }
     setError(null);
-    const r = await (needsToSetCode ? onSetCode(code) : onGuess(code));
-    if (!r.ok) {
-      setError(r.error ?? "Try again");
-    } else {
-      needsToSetCode ? sounds.codeLock() : sounds.guessSubmit();
-      setDraft("");
+    setSubmitting(true);
+    try {
+      const r = await (needsToSetCode ? onSetCode(code) : onGuess(code));
+      if (!r.ok) {
+        setError(r.error ?? "Try again");
+      } else {
+        needsToSetCode ? sounds.codeLock() : sounds.guessSubmit();
+        setDraft("");
+      }
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -115,6 +122,7 @@ export function Board({
       <div className="mt-4 max-w-2xl w-full mx-auto">
         <Composer
           disabled={!needsToSetCode && !isYourTurn}
+          submitting={submitting}
           placeholder={
             needsToSetCode
               ? "Lock in your secret 4-digit code"

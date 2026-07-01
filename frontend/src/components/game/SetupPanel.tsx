@@ -13,6 +13,7 @@ import { api } from "../../lib/api";
 import { useWalletStore } from "../../store/walletStore";
 import { useQueryClient } from "@tanstack/react-query";
 import { TokenLogo } from "../TokenLogo";
+import { Spinner } from "../Spinner";
 
 const STAKE_PRESETS = [1, 5, 10, 25] as const;
 
@@ -198,10 +199,11 @@ export function SetupPanel({
             </div>
 
             <button
-              className="btn-primary w-full mt-6"
+              className="btn-primary w-full mt-6 inline-flex items-center justify-center gap-2"
               disabled={busy}
               onClick={() => onCreate()}
             >
+              {busy && <Spinner />}
               {busy ? "Preparing…" : "Create game"}
             </button>
           </div>
@@ -376,7 +378,8 @@ function VaultLockCard({
             }}
           />
         )}
-        <span className="relative">
+        <span className="relative inline-flex items-center justify-center gap-2">
+          {busy && <Spinner />}
           {busy
             ? "Signing in your wallet…"
             : !walletConnected
@@ -471,10 +474,11 @@ function JoinCard({
       {joinPreview && <JoinPreviewBlock preview={joinPreview} />}
 
       <button
-        className={isStaked ? "btn-primary w-full mt-6" : "btn-ghost w-full mt-6"}
+        className={`${isStaked ? "btn-primary" : "btn-ghost"} w-full mt-6 inline-flex items-center justify-center gap-2`}
         disabled={disabled}
         onClick={() => onJoin(invitePrefill.trim())}
       >
+        {busy && <Spinner />}
         {label}
       </button>
 

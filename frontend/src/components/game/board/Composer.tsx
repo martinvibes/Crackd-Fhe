@@ -14,12 +14,14 @@
 import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { sounds } from "../../../lib/sounds";
+import { Spinner } from "../../Spinner";
 
 export function Composer({
   value,
   onChange,
   onSubmit,
   disabled,
+  submitting = false,
   placeholder,
   submitLabel,
   error,
@@ -28,6 +30,7 @@ export function Composer({
   onChange: (v: string) => void;
   onSubmit: () => void;
   disabled: boolean;
+  submitting?: boolean;
   placeholder: string;
   submitLabel: string;
   error: string | null;
@@ -107,7 +110,7 @@ export function Composer({
     refs[last]?.current?.focus();
   }
 
-  const ready = !disabled && value.length === 4;
+  const ready = !disabled && !submitting && value.length === 4;
 
   return (
     <div className="panel-elevated p-3 md:p-4">
@@ -177,20 +180,23 @@ export function Composer({
         </div>
 
         <motion.button
-          className="btn-primary shrink-0 w-full sm:w-auto inline-flex items-center justify-center gap-2"
+          className="btn-primary shrink-0 w-full sm:w-auto inline-flex items-center justify-center gap-2 disabled:cursor-wait"
           disabled={!ready}
           onClick={onSubmit}
           whileHover={ready ? { scale: 1.03 } : undefined}
           whileTap={ready ? { scale: 0.95, y: 1 } : undefined}
           transition={{ type: "spring", stiffness: 500, damping: 24 }}
         >
-          <DialIcon />
-          {submitLabel}
+          {submitting ? <Spinner /> : <DialIcon />}
+          {submitting ? "Scoring…" : submitLabel}
         </motion.button>
       </div>
 
       <div className="flex items-center justify-between mt-2 text-[10px] uppercase tracking-[0.22em] gap-3">
-        <span className="text-fg-muted truncate">{placeholder}</span>
+        <span className="text-fg-muted truncate inline-flex items-center gap-1.5">
+          {submitting && <Spinner size={11} className="text-accent" />}
+          {submitting ? "Scoring on the encrypted code on-chain…" : placeholder}
+        </span>
         <span
           className={`whitespace-nowrap ${error ? "text-danger" : "text-fg-muted"}`}
         >

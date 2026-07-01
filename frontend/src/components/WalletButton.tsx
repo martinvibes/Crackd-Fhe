@@ -12,6 +12,7 @@ import { shortAddress } from "../lib/evm";
 import { useBalances } from "../lib/balance";
 import { ConnectModal } from "./ConnectModal";
 import { TokenLogo } from "./TokenLogo";
+import { Spinner } from "./Spinner";
 import type { WalletKind } from "../lib/walletProvider";
 
 const EXPLORER_BASE = "https://sepolia.etherscan.io/address";
@@ -31,7 +32,11 @@ export default function WalletButton() {
           disabled={connecting}
           onClick={() => setModalOpen(true)}
         >
-          <span className="h-1.5 w-1.5 rounded-full bg-ink inline-block" />
+          {connecting ? (
+            <Spinner size={14} />
+          ) : (
+            <span className="h-1.5 w-1.5 rounded-full bg-ink inline-block" />
+          )}
           {connecting ? "Signing in…" : "Sign in"}
         </button>
         <ConnectModal open={modalOpen} onClose={() => setModalOpen(false)} />
