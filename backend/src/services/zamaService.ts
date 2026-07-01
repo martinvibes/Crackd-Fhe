@@ -157,6 +157,44 @@ export class ZamaService {
     return this.assets.get(asset).address;
   }
 
+  // ---------- Testnet faucet (admin-funded) ----------
+  //
+  // Players can't pay gas before they have any ETH, so the faucet runs
+  // server-side: the admin mints test tokens to the player and (once) drips a
+  // little Sepolia ETH so they can then approve + stake themselves.
+
+  /** Admin-mints test tokens of `asset` to `address`. Returns tx hash + amount. */
+  async mintTestTokens(
+    address: string,
+    asset: AssetSymbol,
+  ): Promise<{ txHash: string; amountHuman: string }> {
+    const meta = this.assets.get(asset);
+    const amountHuman = asset === "USDC" ? "1000" : "10";
+    const amount = ethers.parseUnits(amountHuman, meta.decimals);
+    const token = new ethers.Contract(
+      meta.address,
+      ["function mint(address to, uint256 amount)"],
+      this.admin,
+    ) as unknown as { mint: ContractFn };
+    const tx = await token.mint(address, amount);
+    await tx.wait();
+    logger.info({ address, asset, amountHuman }, "faucet.mint ok");
+    return { txHash: tx.hash, amountHuman };
+  }
+
+  /** Drip a little Sepolia ETH for gas if the player is low. Returns hash or null. */
+  async dripGas(address: string): Promise<string | null> {
+    const bal = await this.provider.getBalance(address);
+    if (bal >= ethers.parseEther("0.003")) return null;
+    const tx = await this.admin.sendTransaction({
+      to: address,
+      value: ethers.parseEther("0.006"),
+    });
+    await tx.wait();
+    logger.info({ address }, "faucet.gasDrip ok");
+    return tx.hash;
+  }
+
   // ---------- provider helpers ----------
 
   /**

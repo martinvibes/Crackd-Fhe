@@ -15,9 +15,15 @@ import { Router } from "express";
 import { z } from "zod";
 import type { Services } from "../services/services.js";
 import type { AppConfig } from "../config.js";
+import type { AssetSymbol } from "../services/assets.js";
 
 const body = z.object({
   walletAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/, "Invalid EVM address"),
+});
+
+const faucetBody = z.object({
+  walletAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/, "Invalid EVM address"),
+  asset: z.string().default("USDC"),
 });
 
 export function onboardingRouter(services: Services, _cfg: AppConfig): Router {
@@ -37,6 +43,42 @@ export function onboardingRouter(services: Services, _cfg: AppConfig): Router {
     } catch (err) {
       if (err instanceof z.ZodError) {
         res.status(400).json({ error: "Invalid wallet address" });
+        return;
+      }
+      next(err);
+    }
+  });
+
+  /**
+   * POST /api/faucet  { walletAddress, asset }
+   *
+   * Admin-mints test tokens to the player and (once per address) drips a
+   * little Sepolia ETH for gas, so a fresh wallet can stake without first
+   * finding ETH elsewhere. All funded by the admin key — the player pays
+   * nothing.
+   */
+  r.post("/faucet", async (req, res, next) => {
+    try {
+      const { walletAddress, asset } = faucetBody.parse(req.body);
+      if (!services.assets.isSupported(asset)) {
+        res.status(400).json({ error: `Unsupported asset: ${asset}` });
+        return;
+      }
+      const { txHash, amountHuman } = await services.chain.mintTestTokens(
+        walletAddress,
+        asset as AssetSymbol,
+      );
+      // Gas drip once per address.
+      let gasTx: string | null = null;
+      const already = await services.gameStore.wasFunded(walletAddress);
+      if (!already) {
+        gasTx = await services.chain.dripGas(walletAddress);
+        await services.gameStore.markFunded(walletAddress);
+      }
+      res.json({ ok: true, asset, amount: amountHuman, tokenTx: txHash, gasTx });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid request" });
         return;
       }
       next(err);

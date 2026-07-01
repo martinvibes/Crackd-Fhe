@@ -92,6 +92,11 @@ export const api = {
       method: "PUT",
       body: JSON.stringify({ username }),
     }),
+  faucet: (walletAddress: string, asset: string) =>
+    j<{ ok: boolean; asset: string; amount: string; tokenTx: string; gasTx: string | null }>(
+      `/api/faucet`,
+      { method: "POST", body: JSON.stringify({ walletAddress, asset }) },
+    ),
   setAvatar: (wallet: string, imageDataUrl: string) =>
     j<{ ok: boolean }>(`/api/player/${wallet}/avatar`, {
       method: "PUT",

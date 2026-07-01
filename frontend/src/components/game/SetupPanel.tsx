@@ -9,8 +9,8 @@ import type { Asset } from "../../lib/api";
 import type { JoinPreview } from "../../pages/Game";
 import { BackLink } from "./BackLink";
 import { modeLabel, type Mode } from "./ModePicker";
-import { getActiveProvider } from "../../lib/wallet";
-import { mintTestTokens, tokenAddressFor } from "../../lib/evm";
+import { api } from "../../lib/api";
+import { useWalletStore } from "../../store/walletStore";
 
 const STAKE_PRESETS = [1, 5, 10, 25] as const;
 
@@ -40,26 +40,29 @@ const MULTIPLIER_TIERS: Array<{
  * Test-token faucet. On Sepolia the stake tokens are MockERC20s with a public
  * mint(), so players can grab some to actually stake. One tap → tokens in wallet.
  */
-function TokenFaucet({ asset, assets }: { asset: string; assets: Asset[] }) {
+function TokenFaucet({ asset }: { asset: string; assets: Asset[] }) {
+  const address = useWalletStore((s) => s.address);
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const decimals = assets.find((a) => a.symbol === asset)?.decimals ?? 18;
   const amount = asset.toUpperCase() === "USDC" ? 1000 : 10;
 
   async function mint() {
+    if (!address) return;
     setErr(null);
+    setMsg(null);
     setBusy(true);
-    setDone(false);
     try {
-      const token = tokenAddressFor(asset);
-      if (!token) throw new Error(`No ${asset} token configured`);
-      const provider = await getActiveProvider();
-      const signer = await provider.getSigner();
-      await mintTestTokens(signer, token, amount, decimals);
-      setDone(true);
+      // Server-side: admin mints tokens + drips a little gas ETH once, so a
+      // fresh wallet never needs ETH before it can stake.
+      const res = await api.faucet(address, asset);
+      setMsg(
+        res.gasTx
+          ? `Sent ${res.amount} ${asset} + gas ✓`
+          : `Sent ${res.amount} ${asset} ✓`,
+      );
     } catch (e) {
-      setErr((e as Error).message?.slice(0, 120) ?? "Mint failed");
+      setErr((e as Error).message?.slice(0, 140) ?? "Faucet failed");
     } finally {
       setBusy(false);
     }
@@ -69,14 +72,14 @@ function TokenFaucet({ asset, assets }: { asset: string; assets: Asset[] }) {
     <div className="mt-3">
       <div className="flex items-center justify-between gap-3 rounded-lg border border-ink-border bg-ink-elevated px-3 py-2">
         <span className="text-xs text-fg-muted">
-          Need test {asset}? Mint {amount.toLocaleString()} free on Sepolia.
+          {msg ?? `Need test ${asset}? Get ${amount.toLocaleString()} free (gas included).`}
         </span>
         <button
           onClick={mint}
-          disabled={busy}
+          disabled={busy || !address}
           className="text-xs font-medium text-accent hover:underline disabled:opacity-50 cursor-pointer whitespace-nowrap"
         >
-          {busy ? "Minting…" : done ? "Minted" : `Get ${asset}`}
+          {busy ? "Sending…" : `Get ${asset}`}
         </button>
       </div>
       {err && <div className="mt-1 text-[11px] text-danger">{err}</div>}
