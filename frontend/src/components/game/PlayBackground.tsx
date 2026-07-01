@@ -1,39 +1,47 @@
 /**
- * Ambient backdrop for the /play screens — a "cipher field":
+ * Ambient backdrop for the /play screens — a floating "cipher field":
  *   - a faint blueprint grid,
  *   - two slow-drifting magenta/violet glows,
- *   - a twinkling starfield,
- *   - faint monospace digits (0-9) that slowly rise and fade — a nod to the
- *     code-breaking theme, so it's ours and not a generic starfield.
+ *   - a twinkling starfield scattered everywhere,
+ *   - monospace digits (0-9) scattered across the whole screen that gently
+ *     float around and pulse — a nod to the code-breaking theme.
  *
  * Pure CSS animations (GPU-friendly), positions memoised once. Sits fixed
- * behind everything on the play routes. `intense` bumps the glow on active turns.
+ * behind everything. `intense` bumps the glow on active turns.
  */
 import { useMemo } from "react";
+
+const FLOATS = ["a", "b", "c", "d"] as const;
 
 export function PlayBackground({ intense = false }: { intense?: boolean }) {
   const stars = useMemo(
     () =>
-      Array.from({ length: 34 }, (_, i) => ({
+      Array.from({ length: 54 }, (_, i) => ({
         id: i,
         left: Math.random() * 100,
         top: Math.random() * 100,
-        size: 1 + Math.random() * 2,
+        size: 1 + Math.random() * 2.4,
         delay: Math.random() * 6,
         dur: 3 + Math.random() * 5,
+        magenta: i % 4 === 0,
       })),
     [],
   );
 
+  // Digits scattered across the whole viewport, each drifting on one of a few
+  // float paths so the motion looks organic rather than uniform.
   const digits = useMemo(
     () =>
-      Array.from({ length: 10 }, (_, i) => ({
+      Array.from({ length: 30 }, (_, i) => ({
         id: i,
         char: String(Math.floor(Math.random() * 10)),
         left: Math.random() * 100,
-        delay: Math.random() * 12,
-        dur: 12 + Math.random() * 10,
-        size: 12 + Math.random() * 20,
+        top: Math.random() * 100,
+        size: 12 + Math.random() * 26,
+        delay: Math.random() * 8,
+        dur: 7 + Math.random() * 10,
+        float: FLOATS[i % FLOATS.length],
+        magenta: i % 3 !== 0,
       })),
     [],
   );
@@ -48,9 +56,9 @@ export function PlayBackground({ intense = false }: { intense?: boolean }) {
             "linear-gradient(to right, rgba(255,0,168,0.045) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,0,168,0.045) 1px, transparent 1px)",
           backgroundSize: "76px 76px",
           maskImage:
-            "radial-gradient(ellipse 95% 75% at 50% 35%, black 5%, transparent 78%)",
+            "radial-gradient(ellipse 95% 80% at 50% 40%, black 10%, transparent 82%)",
           WebkitMaskImage:
-            "radial-gradient(ellipse 95% 75% at 50% 35%, black 5%, transparent 78%)",
+            "radial-gradient(ellipse 95% 80% at 50% 40%, black 10%, transparent 82%)",
         }}
       />
 
@@ -81,31 +89,31 @@ export function PlayBackground({ intense = false }: { intense?: boolean }) {
       {/* twinkling starfield */}
       {stars.map((s) => (
         <span
-          key={s.id}
+          key={`s${s.id}`}
           className="absolute rounded-full"
           style={{
             left: `${s.left}%`,
             top: `${s.top}%`,
             width: s.size,
             height: s.size,
-            background: s.id % 5 === 0 ? "#FF6FD0" : "rgba(255,255,255,0.75)",
-            boxShadow: s.id % 5 === 0 ? "0 0 6px rgba(255,0,168,0.8)" : "none",
+            background: s.magenta ? "#FF6FD0" : "rgba(255,255,255,0.8)",
+            boxShadow: s.magenta ? "0 0 6px rgba(255,0,168,0.85)" : "none",
             animation: `crackd-twinkle ${s.dur}s ease-in-out ${s.delay}s infinite`,
           }}
         />
       ))}
 
-      {/* rising cipher digits */}
+      {/* floating cipher digits, scattered all around */}
       {digits.map((d) => (
         <span
-          key={d.id}
-          className="absolute font-mono font-semibold tabular-nums"
+          key={`d${d.id}`}
+          className="absolute font-mono font-semibold tabular-nums select-none"
           style={{
             left: `${d.left}%`,
-            bottom: "-8%",
+            top: `${d.top}%`,
             fontSize: d.size,
-            color: "rgba(255,0,168,0.14)",
-            animation: `crackd-rise ${d.dur}s linear ${d.delay}s infinite`,
+            color: d.magenta ? "rgba(255,0,168,0.9)" : "rgba(255,255,255,0.9)",
+            animation: `crackd-float-${d.float} ${d.dur}s ease-in-out ${d.delay}s infinite`,
           }}
         >
           {d.char}
@@ -116,14 +124,25 @@ export function PlayBackground({ intense = false }: { intense?: boolean }) {
         @keyframes crackd-drift-a { 0%,100% { transform: translate(0,0); } 50% { transform: translate(60px,40px); } }
         @keyframes crackd-drift-b { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-52px,-30px); } }
         @keyframes crackd-twinkle {
-          0%,100% { opacity: 0.15; transform: translateY(0); }
-          50% { opacity: 0.9; transform: translateY(-4px); }
+          0%,100% { opacity: 0.12; transform: translateY(0); }
+          50% { opacity: 0.9; transform: translateY(-3px); }
         }
-        @keyframes crackd-rise {
-          0% { transform: translateY(0); opacity: 0; }
-          10% { opacity: 1; }
-          90% { opacity: 1; }
-          100% { transform: translateY(-108vh); opacity: 0; }
+        @keyframes crackd-float-a {
+          0%,100% { transform: translate(0,0); opacity: 0.06; }
+          50% { transform: translate(12px,-18px); opacity: 0.26; }
+        }
+        @keyframes crackd-float-b {
+          0%,100% { transform: translate(0,0); opacity: 0.05; }
+          50% { transform: translate(-16px,14px); opacity: 0.22; }
+        }
+        @keyframes crackd-float-c {
+          0%,100% { transform: translate(0,0); opacity: 0.07; }
+          33% { transform: translate(14px,12px); opacity: 0.24; }
+          66% { transform: translate(-12px,-14px); opacity: 0.16; }
+        }
+        @keyframes crackd-float-d {
+          0%,100% { transform: translate(0,0) rotate(0deg); opacity: 0.05; }
+          50% { transform: translate(-10px,-12px) rotate(8deg); opacity: 0.2; }
         }
         @media (prefers-reduced-motion: reduce) {
           [style*="crackd-"] { animation: none !important; }
