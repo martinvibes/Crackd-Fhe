@@ -97,7 +97,7 @@ export function FinishedPanel({
             : won
               ? `You broke the code in ${yourGuesses} guess${yourGuesses === 1 ? "" : "es"}.`
               : lostToVault
-                ? `The Vault broke your code in ${theirGuesses} guess${theirGuesses === 1 ? "" : "es"}. Omo, don't vex — try am again.`
+                ? `The Vault broke your code in ${theirGuesses} guess${theirGuesses === 1 ? "" : "es"}. Don't sweat it — run it back.`
                 : `Your opponent cracked your code in ${theirGuesses} guess${theirGuesses === 1 ? "" : "es"}.`}
         </motion.div>
       </div>

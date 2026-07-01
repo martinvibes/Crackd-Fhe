@@ -38,6 +38,7 @@ import {
 import { getActiveProvider } from "../lib/wallet";
 
 import { ErrorBar } from "../components/game/ErrorBar";
+import { PlayBackground } from "../components/game/PlayBackground";
 import { ModePicker, type Mode } from "../components/game/ModePicker";
 import { SetupPanel } from "../components/game/SetupPanel";
 import { LobbyPanel } from "../components/game/LobbyPanel";
@@ -290,6 +291,7 @@ export default function Game() {
         compact ? "py-3" : "py-10 md:py-16"
       }`}
     >
+      <PlayBackground intense={stage === "active"} />
       {err && <ErrorBar message={err} onClose={() => setErr(null)} />}
 
       {stage === "mode_pick" && (

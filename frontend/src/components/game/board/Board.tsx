@@ -75,8 +75,6 @@ export function Board({
       // only the timeline scrolls inside.
       style={{ height: "calc(100dvh - 200px)" }}
     >
-      <BoardBackground active={isYourTurn} />
-
       <BoardHeader
         view={view}
         walletAddress={walletAddress}
@@ -131,64 +129,6 @@ export function Board({
           error={error}
         />
       </div>
-    </div>
-  );
-}
-
-/**
- * Ambient animated backdrop for the play screen — two slow-drifting magenta
- * glows over a faint blueprint grid. Purely decorative; sits behind the board
- * and intensifies subtly on your turn.
- */
-function BoardBackground({ active }: { active: boolean }) {
-  return (
-    <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden>
-      {/* faint grid */}
-      <div
-        className="absolute inset-0 opacity-[0.5]"
-        style={{
-          backgroundImage:
-            "linear-gradient(to right, rgba(255,0,168,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,0,168,0.05) 1px, transparent 1px)",
-          backgroundSize: "72px 72px",
-          maskImage:
-            "radial-gradient(ellipse 90% 70% at 50% 35%, black 5%, transparent 75%)",
-          WebkitMaskImage:
-            "radial-gradient(ellipse 90% 70% at 50% 35%, black 5%, transparent 75%)",
-        }}
-      />
-      {/* drifting glows */}
-      <div
-        className="absolute rounded-full blur-3xl"
-        style={{
-          width: 520,
-          height: 520,
-          top: "-8%",
-          left: "-6%",
-          background: `radial-gradient(circle, rgba(255,0,168,${active ? 0.14 : 0.08}), transparent 70%)`,
-          animation: "crackd-drift-a 18s ease-in-out infinite",
-        }}
-      />
-      <div
-        className="absolute rounded-full blur-3xl"
-        style={{
-          width: 460,
-          height: 460,
-          bottom: "-10%",
-          right: "-4%",
-          background: `radial-gradient(circle, rgba(120,0,200,${active ? 0.12 : 0.07}), transparent 70%)`,
-          animation: "crackd-drift-b 22s ease-in-out infinite",
-        }}
-      />
-      <style>{`
-        @keyframes crackd-drift-a {
-          0%,100% { transform: translate(0,0); }
-          50% { transform: translate(60px, 40px); }
-        }
-        @keyframes crackd-drift-b {
-          0%,100% { transform: translate(0,0); }
-          50% { transform: translate(-50px, -30px); }
-        }
-      `}</style>
     </div>
   );
 }
