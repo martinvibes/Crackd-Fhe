@@ -1,10 +1,12 @@
 /**
- * Hero header above the guess timeline. Three layers:
- *   1. TurnBadge — a live, colour-coded pill at the top.
- *   2. Huge statement — the current "act" (setting code / your turn / their turn).
- *   3. Player strip — two tiles with codes + guess counts. The Vault's taunt
- *      surfaces as a speech bubble tethered to its tile (see PlayerTile).
+ * Header above the guess timeline:
+ *   1. TurnBadge — a live, colour-coded pill.
+ *   2. Compact statement — the current "act".
+ *   3. Player strip — You vs The Vault tiles.
+ *   4. Vault taunt — an opaque speech bubble below the strip, tail pointing
+ *      up at The Vault tile (no overlap with the tile's own content).
  */
+import { AnimatePresence, motion } from "framer-motion";
 import type { SafeGameView } from "../../../lib/socket";
 import { PlayerTile } from "./PlayerTile";
 
@@ -22,17 +24,16 @@ export function BoardHeader({
   const isAi = view.mode === "vs_ai_free" || view.mode === "vs_ai_staked";
 
   return (
-    <div className="max-w-2xl mx-auto">
-      {/* Turn badge — immediate visual who-moves-now */}
+    <div className="max-w-2xl mx-auto w-full">
       <div className="flex justify-center">
         <TurnBadge state={needsCode ? "setup" : yours ? "you" : "opponent"} />
       </div>
 
-      {/* Big statement */}
-      <div className="mt-4 text-center">
+      {/* Compact statement — smaller than the landing hero so the board fits */}
+      <div className="mt-3 text-center">
         <div
-          className="font-semibold leading-[0.9] tracking-[-0.03em]"
-          style={{ fontSize: "clamp(38px, 6vw, 68px)" }}
+          className="font-semibold leading-[0.95] tracking-[-0.03em]"
+          style={{ fontSize: "clamp(26px, 4.2vw, 44px)" }}
         >
           {needsCode ? (
             <>
@@ -42,22 +43,17 @@ export function BoardHeader({
             <>
               Make a <span className="text-accent">crack.</span>
             </>
-          ) : isAi ? (
-            <>
-              The Vault's{" "}
-              <span className="text-fg-secondary italic">thinking…</span>
-            </>
           ) : (
             <>
-              Opponent's{" "}
-              <span className="text-fg-secondary italic">thinking…</span>
+              {isAi ? "The Vault" : "Opponent"}
+              <span className="text-fg-secondary italic"> is thinking…</span>
             </>
           )}
         </div>
       </div>
 
-      {/* Player strip — two columns, no "VS" rail on mobile (too cramped) */}
-      <div className="mt-6 md:mt-7 grid grid-cols-2 gap-2 md:gap-4 relative">
+      {/* Player strip */}
+      <div className="mt-4 grid grid-cols-2 gap-2 md:gap-4 relative">
         <PlayerTile
           label="You"
           address={walletAddress}
@@ -65,7 +61,6 @@ export function BoardHeader({
           active={yours}
           guessCount={view.yourGuesses.length}
         />
-        {/* VS badge — floats between tiles on md+ only */}
         <span
           className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 items-center justify-center rounded-full bg-ink text-[10px] uppercase tracking-[0.25em] text-fg-muted border border-ink-border z-10"
           aria-hidden
@@ -81,51 +76,87 @@ export function BoardHeader({
           rtl
           isVault={isAi}
           thinking={isAi && !yours && view.status === "active"}
-          taunt={isAi ? tauntLine : null}
         />
+      </div>
+
+      {/* Vault taunt — opaque bubble under the strip, aligned to the Vault side */}
+      <div className="grid grid-cols-2 gap-2 md:gap-4">
+        <div />
+        <AnimatePresence mode="wait">
+          {isAi && tauntLine && (
+            <motion.div
+              key={tauntLine}
+              initial={{ opacity: 0, y: -6, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -4, scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 400, damping: 26 }}
+              className="relative mt-2"
+            >
+              {/* Tail pointing up at the Vault tile */}
+              <div
+                className="absolute right-6 -top-1.5 w-3 h-3 rotate-45 border-t border-l"
+                style={{ background: "#150c1f", borderColor: "rgba(255,0,168,0.45)" }}
+              />
+              <div
+                className="rounded-2xl px-3.5 py-2.5 border text-sm leading-snug"
+                style={{
+                  background: "linear-gradient(160deg, #1a1026, #120a1b)",
+                  borderColor: "rgba(255,0,168,0.4)",
+                  boxShadow: "0 14px 34px -18px rgba(255,0,168,0.7)",
+                }}
+              >
+                <div className="text-[9px] uppercase tracking-[0.28em] text-accent/90 mb-0.5">
+                  The Vault
+                </div>
+                <div className="text-fg-primary">{tauntLine}</div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
 }
 
 /**
- * The turn pill. Three states, each with its own colour and motion:
- *   - "setup" = neutral, no pulse
- *   - "you"   = magenta, pulsing ring
- *   - "opponent" = muted, animated ellipsis
+ * Turn pill — bigger, clearer, glowing on your turn.
  */
 function TurnBadge({ state }: { state: "setup" | "you" | "opponent" }) {
+  if (state === "you") {
+    return (
+      <motion.span
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 400, damping: 22 }}
+        className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full text-xs font-semibold uppercase tracking-[0.28em] border"
+        style={{
+          background: "linear-gradient(180deg, rgba(255,0,168,0.22), rgba(255,0,168,0.08))",
+          borderColor: "rgba(255,0,168,0.55)",
+          color: "#FF75CF",
+          boxShadow: "0 0 24px -6px rgba(255,0,168,0.55)",
+        }}
+      >
+        <PulsingDot />
+        Your turn
+      </motion.span>
+    );
+  }
   if (state === "setup") {
     return (
-      <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] uppercase tracking-[0.28em] border border-ink-border bg-ink-raised text-fg-secondary">
+      <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold uppercase tracking-[0.28em] border border-ink-border bg-ink-raised text-fg-secondary">
         <span className="w-1.5 h-1.5 rounded-full bg-fg-muted" />
         Setting codes
       </span>
     );
   }
-  if (state === "you") {
-    return (
-      <span
-        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] uppercase tracking-[0.28em] border"
-        style={{
-          background: "rgba(255, 0, 168, 0.08)",
-          borderColor: "rgba(255, 0, 168, 0.35)",
-          color: "#FF00A8",
-        }}
-      >
-        <PulsingDot />
-        Your turn
-      </span>
-    );
-  }
   return (
-    <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] uppercase tracking-[0.28em] border border-ink-border bg-ink-raised text-fg-secondary">
+    <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold uppercase tracking-[0.28em] border border-ink-border bg-ink-raised text-fg-secondary">
       <span className="inline-flex">
         <span className="w-1 h-1 rounded-full bg-fg-muted animate-bounce [animation-delay:-0.3s]" />
         <span className="w-1 h-1 rounded-full bg-fg-muted animate-bounce [animation-delay:-0.15s] ml-0.5" />
         <span className="w-1 h-1 rounded-full bg-fg-muted animate-bounce ml-0.5" />
       </span>
-      <span>Opponent turn</span>
+      Vault's turn
     </span>
   );
 }

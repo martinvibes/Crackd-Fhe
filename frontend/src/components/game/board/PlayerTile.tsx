@@ -9,7 +9,7 @@
  * Mobile layout stacks address above guess-count so a short address
  * doesn't fight the count on the same row. Code tiles shrink below sm.
  */
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { shortAddress } from "../../../lib/evm";
 
 export function PlayerTile({
@@ -21,7 +21,6 @@ export function PlayerTile({
   rtl,
   isVault,
   thinking,
-  taunt,
 }: {
   label: string;
   address: string;
@@ -34,8 +33,6 @@ export function PlayerTile({
   isVault?: boolean;
   /** The Vault is currently taking its turn. */
   thinking?: boolean;
-  /** A taunt to surface as a speech bubble above the tile. */
-  taunt?: string | null;
 }) {
   const display =
     address === "waiting"
@@ -46,46 +43,6 @@ export function PlayerTile({
 
   return (
     <div className="relative min-w-0">
-      {/* Speech bubble — only for The Vault, only when it has something to say */}
-      {isVault && (
-        <AnimatePresence>
-          {taunt && (
-            <motion.div
-              key={taunt}
-              initial={{ opacity: 0, y: 8, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 6, scale: 0.97 }}
-              transition={{ type: "spring", stiffness: 420, damping: 28 }}
-              className="absolute left-2 right-2 -top-2 z-20 -translate-y-full"
-            >
-              <div
-                className="rounded-2xl px-3.5 py-2.5 border text-sm leading-snug"
-                style={{
-                  background:
-                    "linear-gradient(160deg, rgba(255,0,168,0.16), rgba(255,0,168,0.05))",
-                  borderColor: "rgba(255,0,168,0.4)",
-                  boxShadow:
-                    "0 12px 30px -14px rgba(255,0,168,0.6), inset 0 1px 0 rgba(255,255,255,0.06)",
-                }}
-              >
-                <div className="text-[9px] uppercase tracking-[0.28em] text-accent/90 mb-0.5">
-                  The Vault
-                </div>
-                <div className="text-fg-primary">{taunt}</div>
-              </div>
-              {/* Tail pointing down at the tile */}
-              <div
-                className="absolute right-6 -bottom-1.5 w-3 h-3 rotate-45 border-b border-r"
-                style={{
-                  background: "rgba(255,0,168,0.09)",
-                  borderColor: "rgba(255,0,168,0.4)",
-                }}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      )}
-
       <div
         className="panel p-3 md:p-4 min-w-0 transition-all relative overflow-hidden"
         style={
