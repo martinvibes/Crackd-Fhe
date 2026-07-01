@@ -80,7 +80,7 @@ const schema = z.object({
     .regex(/^0x[0-9a-fA-F]{40}$/, "CRACKD_FHE_ADDRESS must be a 0x address"),
   // Zama relayer — used by the frontend for encryption/decryption. The
   // backend includes it for completeness but generally does not call it.
-  RELAYER_URL: z.string().url().default("https://relayer.testnet.zama.cloud"),
+  RELAYER_URL: z.string().url().default("https://relayer.testnet.zama.org"),
 
   ANTHROPIC_API_KEY: z.string().min(1),
   CLAUDE_MODEL: z.string().default("claude-haiku-4-5-20251001"),

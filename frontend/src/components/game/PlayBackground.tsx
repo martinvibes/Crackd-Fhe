@@ -37,7 +37,7 @@ export function PlayBackground({ intense = false }: { intense?: boolean }) {
         char: String(Math.floor(Math.random() * 10)),
         left: Math.random() * 100,
         top: Math.random() * 100,
-        size: 7 + Math.random() * 7,
+        size: 8 + Math.random() * 7,
         delay: Math.random() * 8,
         dur: 7 + Math.random() * 10,
         float: FLOATS[i % FLOATS.length],
