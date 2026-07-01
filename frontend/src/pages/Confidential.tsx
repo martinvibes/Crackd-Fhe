@@ -40,6 +40,7 @@ function Game({ address }: { address: string }) {
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<"cracked" | "failed" | null>(null);
+  const [taunt, setTaunt] = useState<string | null>(null);
 
   const getSigner = useCallback(async () => {
     const provider = await getActiveProvider();
@@ -82,12 +83,17 @@ function Game({ address }: { address: string }) {
             ...prev,
             { code, result: { pots: res.pots, pans: res.pans }, timestamp: Date.now() },
           ];
-          if (res.solved || res.pots === 4) {
+          const cracked = res.solved || res.pots === 4;
+          if (cracked) {
             setResult("cracked");
             setPhase("finished");
           } else if (next.length >= MAX_GUESSES) {
             setResult("failed");
             setPhase("finished");
+          } else {
+            // The Vault reacts to every guess (shown in its speech bubble).
+            setTaunt(vaultReaction(res.pots, res.pans, MAX_GUESSES - next.length));
+            window.setTimeout(() => setTaunt(null), 6000);
           }
           return next;
         });
@@ -108,7 +114,9 @@ function Game({ address }: { address: string }) {
       you: "playerOne",
       youAre: address,
       opponent: "vault",
-      yourCode: "sealed", // truthy → composer is in "guess" mode, not code-setting
+      // You're the cracker here — you have no secret of your own. Leave it
+      // unset (shows dots) so the tile doesn't render the literal "sealed".
+      yourCode: undefined,
       opponentCodeSet: true,
       yourGuesses: rounds,
       opponentGuesses: [],
@@ -145,7 +153,7 @@ function Game({ address }: { address: string }) {
             <Board
               walletAddress={address}
               view={view}
-              tauntLine={null}
+              tauntLine={taunt}
               onSetCode={async () => ({ ok: true })}
               onGuess={onGuess}
             />
@@ -358,6 +366,28 @@ function UnlockIcon() {
       <circle cx="12" cy="15" r="1.4" fill="currentColor" />
     </svg>
   );
+}
+
+/** The Vault's spoken reaction to a guess (English, based on how close). */
+function vaultReaction(pots: number, pans: number, left: number): string {
+  const pick = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)]!;
+  if (pots === 3)
+    return pick([
+      "One digit off. So close it hurts.",
+      "Three in place… you're right on the edge.",
+    ]);
+  if (pots === 2)
+    return pick(["Getting warm. Two locked in.", "Halfway there — keep pushing."]);
+  if (pots === 1 || pans >= 2)
+    return pick(["You're circling it now.", "Something's clicking. Barely."]);
+  if (pots === 0 && pans === 0)
+    return pick([
+      "Ice cold. Nothing right.",
+      "Not even close. The Vault holds.",
+    ]);
+  if (left <= 2)
+    return pick(["Clock's running out on you.", "Two shots left. Make them count."]);
+  return pick(["Is that your best guess?", "The Vault isn't impressed."]);
 }
 
 function friendly(e: unknown): string {
