@@ -18,6 +18,7 @@ import { sounds } from "../../../lib/sounds";
 import { TokenLogo } from "../../TokenLogo";
 import { BoardHeader } from "./BoardHeader";
 import { GuessBubble } from "./GuessBubble";
+import { TypingBubble } from "./TypingBubble";
 import { Composer } from "./Composer";
 import { buildTimeline } from "./timeline";
 
@@ -25,12 +26,15 @@ export function Board({
   walletAddress,
   view,
   tauntLine,
+  vaultThinking = false,
   onSetCode,
   onGuess,
 }: {
   walletAddress: string;
   view: SafeGameView;
   tauntLine: string | null;
+  /** Show a chat "typing…" bubble on the opponent side (Vault computing). */
+  vaultThinking?: boolean;
   onSetCode: (code: string) => Promise<{ ok: boolean; error?: string }>;
   onGuess: (guess: string) => Promise<{ ok: boolean; error?: string }>;
 }) {
@@ -72,7 +76,7 @@ export function Board({
     if (!el) return;
     // smooth for incremental changes; instant on first paint
     el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-  }, [timeline.length, tauntLine]);
+  }, [timeline.length, tauntLine, vaultThinking]);
 
   return (
     <div
@@ -105,7 +109,7 @@ export function Board({
         className="mt-4 max-w-2xl w-full mx-auto flex-1 min-h-0 overflow-y-auto scroll-smooth pr-1"
       >
         <div className="flex flex-col gap-2.5 py-1">
-          {timeline.length === 0 ? (
+          {timeline.length === 0 && !vaultThinking ? (
             <EmptyState needsToSetCode={needsToSetCode} />
           ) : (
             timeline.map((item, i) => (
@@ -115,6 +119,7 @@ export function Board({
               />
             ))
           )}
+          {vaultThinking && <TypingBubble />}
         </div>
       </div>
 

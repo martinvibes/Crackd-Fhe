@@ -60,6 +60,7 @@ function Game({ address }: { address: string }) {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<"cracked" | "failed" | "draw" | null>(null);
   const [taunt, setTaunt] = useState<string | null>(null);
+  const [vaultThinking, setVaultThinking] = useState(false);
 
   const getSigner = useCallback(async (): Promise<Signer> => {
     const provider = await getActiveProvider();
@@ -150,12 +151,14 @@ function Game({ address }: { address: string }) {
 
         // --- The Vault's move: it guesses against YOUR sealed code ---
         setCurrentTurn("vault");
+        setVaultThinking(true);
         const history = vaultGuesses.map((g) => ({
           guess: g.code,
           pots: g.result.pots,
           pans: g.result.pans,
         }));
         const vg = await api.confidentialVaultGuess(playerGameId, history);
+        setVaultThinking(false);
         setVaultGuesses((prev) => [
           ...prev,
           {
@@ -180,6 +183,7 @@ function Game({ address }: { address: string }) {
         setCurrentTurn("you");
         return { ok: true };
       } catch (e) {
+        setVaultThinking(false);
         setCurrentTurn("you");
         return { ok: false, error: friendly(e) };
       }
@@ -251,6 +255,7 @@ function Game({ address }: { address: string }) {
               walletAddress={address}
               view={view}
               tauntLine={taunt}
+              vaultThinking={vaultThinking}
               onSetCode={onSetCode}
               onGuess={onGuess}
             />
