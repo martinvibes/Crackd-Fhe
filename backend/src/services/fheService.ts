@@ -78,13 +78,21 @@ export class FheService {
    * plaintext code (kept server-side only, for win verification / analytics).
    */
   async sealVaultCode(): Promise<{ gameId: string; code: string }> {
+    // The Zama relayer's input-proof endpoint intermittently connect-times-out
+    // / 500s from server environments. It's transient, so retry a few times
+    // with backoff — one attempt almost always lands.
+    const MAX = 5;
     let lastErr: unknown;
-    for (let attempt = 1; attempt <= 2; attempt++) {
+    for (let attempt = 1; attempt <= MAX; attempt++) {
       try {
         return await this.sealOnce();
       } catch (err) {
         lastErr = err;
-        logger.warn({ err, attempt }, "confidential: seal attempt failed");
+        logger.warn(
+          { attempt, msg: (err as Error)?.message?.slice(0, 120) },
+          "confidential: seal attempt failed, retrying",
+        );
+        if (attempt < MAX) await sleep(700 * attempt);
       }
     }
     throw lastErr;
@@ -129,6 +137,10 @@ export class FheService {
     await tx.wait();
     return tx.hash;
   }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
 }
 
 /** A valid Crackd code: 4 distinct digits, unbiased. */
