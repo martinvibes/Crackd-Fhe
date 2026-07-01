@@ -13,9 +13,10 @@
  */
 import type { Signer } from "ethers";
 
-const RELAYER_URL =
-  (import.meta.env.VITE_RELAYER_URL as string) ??
-  "https://relayer.testnet.zama.cloud";
+// Read on-chain FHE config from our working RPC (the SDK's default can be a
+// rate-limited/dead public endpoint). The relayer URL itself comes from the
+// SDK's SepoliaConfig — overriding it with a stale env value 404s → "Bad JSON".
+const RPC_URL = import.meta.env.VITE_EVM_RPC_URL as string;
 
 // The SDK type surface is loaded lazily; we keep the instance loosely typed
 // to avoid a static import of the (WASM-heavy) module at build time.
@@ -62,7 +63,10 @@ export async function getFheInstance(): Promise<FheInstance> {
         SepoliaConfig: Record<string, unknown>;
       };
       await sdk.initSDK();
-      const config = { ...sdk.SepoliaConfig, relayerUrl: RELAYER_URL };
+      const config = {
+        ...sdk.SepoliaConfig,
+        ...(RPC_URL ? { network: RPC_URL } : {}),
+      };
       return sdk.createInstance(config);
     })();
   }
