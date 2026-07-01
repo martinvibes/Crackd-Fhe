@@ -6,6 +6,7 @@
  *    copy-to-clipboard (✓ feedback), an explorer link, and Disconnect.
  */
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useWalletStore } from "../store/walletStore";
 import { shortAddress } from "../lib/evm";
 import { useBalances } from "../lib/balance";
@@ -18,6 +19,8 @@ export default function WalletButton() {
   const { address, kind, connecting, disconnect } = useWalletStore();
   const [open, setOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
 
   if (!address) {
     return (
@@ -69,12 +72,28 @@ export default function WalletButton() {
           address={address}
           kind={kind}
           onClose={() => setOpen(false)}
-          onDisconnect={async () => {
-            await disconnect();
+          onDisconnect={() => {
             setOpen(false);
+            setConfirmOpen(true);
           }}
         />
       )}
+
+      <DisconnectConfirm
+        open={confirmOpen}
+        address={address}
+        busy={disconnecting}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={async () => {
+          setDisconnecting(true);
+          try {
+            await disconnect();
+          } finally {
+            setDisconnecting(false);
+            setConfirmOpen(false);
+          }
+        }}
+      />
     </div>
   );
 }
@@ -304,45 +323,118 @@ function CheckIcon() {
   );
 }
 
+function DisconnectConfirm({
+  open,
+  address,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  open: boolean;
+  address: string;
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCancel();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onCancel]);
+
+  if (!open) return null;
+
+  return createPortal(
+    <>
+      <div
+        className="fixed inset-0 z-[110] bg-ink/70 backdrop-blur-sm animate-fade-in"
+        onClick={onCancel}
+        aria-hidden
+      />
+      <div
+        className="fixed inset-0 z-[111] flex items-center justify-center p-4"
+        role="dialog"
+        aria-modal="true"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) onCancel();
+        }}
+      >
+        <div className="panel-elevated w-full max-w-xs p-6 animate-slide-up text-center">
+          <div className="mx-auto grid h-11 w-11 place-items-center rounded-full bg-danger/15 text-danger">
+            <PowerIcon />
+          </div>
+          <h3 className="mt-4 text-lg font-semibold">Disconnect wallet?</h3>
+          <p className="mt-1.5 text-sm text-fg-muted">
+            You’ll sign out of{" "}
+            <span className="font-mono text-fg-secondary">
+              {shortAddress(address, 4)}
+            </span>{" "}
+            and need to sign in again to play staked games.
+          </p>
+          <div className="mt-5 flex gap-2.5">
+            <button
+              onClick={onCancel}
+              disabled={busy}
+              className="btn-ghost flex-1 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={onConfirm}
+              disabled={busy}
+              className="btn-danger flex-1 cursor-pointer disabled:opacity-60"
+            >
+              {busy ? "Disconnecting…" : "Disconnect"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </>,
+    document.body,
+  );
+}
+
+function PowerIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M12 3v8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path
+        d="M7.5 6.5a7 7 0 1 0 9 0"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+const TOKEN_LOGOS: Record<string, string> = {
+  ETH: "/tokens/eth.png",
+  WETH: "/tokens/weth.png",
+  USDC: "/tokens/usdc.png",
+};
+
 function TokenLogo({ symbol, size = 24 }: { symbol: string; size?: number }) {
-  const s = symbol.toUpperCase();
-  if (s === "ETH" || s === "WETH") {
-    // Ethereum diamond (two-tone). WETH shares the mark.
+  const src = TOKEN_LOGOS[symbol.toUpperCase()];
+  const [failed, setFailed] = useState(false);
+  if (src && !failed) {
     return (
-      <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden>
-        <circle cx="16" cy="16" r="16" fill="#627EEA" />
-        <g fill="#FFF" fillRule="nonzero">
-          <path fillOpacity="0.6" d="M16.5 4v8.87l7.5 3.35z" />
-          <path d="M16.5 4L9 16.22l7.5-3.35z" />
-          <path fillOpacity="0.6" d="M16.5 21.97V28L24 17.62z" />
-          <path d="M16.5 28v-6.03L9 17.62z" />
-          <path fillOpacity="0.2" d="M16.5 20.57l7.5-4.35-7.5-3.35z" />
-          <path fillOpacity="0.6" d="M9 16.22l7.5 4.35v-7.7z" />
-        </g>
-      </svg>
-    );
-  }
-  if (s === "USDC") {
-    return (
-      <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden>
-        <circle cx="16" cy="16" r="16" fill="#2775CA" />
-        <text
-          x="16"
-          y="22"
-          textAnchor="middle"
-          fontSize="18"
-          fontWeight="700"
-          fill="#FFF"
-          fontFamily="system-ui, sans-serif"
-        >
-          $
-        </text>
-      </svg>
+      <img
+        src={src}
+        alt={symbol}
+        width={size}
+        height={size}
+        className="rounded-full shrink-0"
+        onError={() => setFailed(true)}
+      />
     );
   }
   return (
     <span
-      className="grid place-items-center rounded-full bg-ink-raised text-[10px] font-semibold text-fg-secondary"
+      className="grid place-items-center rounded-full bg-ink-raised text-[10px] font-semibold text-fg-secondary shrink-0"
       style={{ width: size, height: size }}
     >
       {symbol.slice(0, 1)}
