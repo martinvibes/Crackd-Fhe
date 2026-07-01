@@ -69,8 +69,11 @@ export function Board({
 
   return (
     <div
-      className="animate-fade-in flex flex-col"
-      style={{ minHeight: "calc(100vh - 180px)" }}
+      className="animate-fade-in flex flex-col overflow-hidden"
+      // Bounded to the viewport minus the top bar, wrapper padding, and the
+      // floating bottom-nav clearance so the board never pushes the page —
+      // only the timeline scrolls inside.
+      style={{ height: "calc(100dvh - 200px)" }}
     >
       <BoardBackground active={isYourTurn} />
 
@@ -90,11 +93,11 @@ export function Board({
           />
         )}
 
-      {/* Scrolling timeline */}
+      {/* Scrolling timeline — flex-1 + min-h-0 so it takes exactly the
+          leftover space and scrolls internally (page never grows). */}
       <div
         ref={scrollerRef}
-        className="mt-4 max-w-2xl w-full mx-auto flex-1 overflow-y-auto scroll-smooth pr-1"
-        style={{ minHeight: "180px", maxHeight: "44vh" }}
+        className="mt-4 max-w-2xl w-full mx-auto flex-1 min-h-0 overflow-y-auto scroll-smooth pr-1"
       >
         <div className="flex flex-col gap-2.5 py-1">
           {timeline.length === 0 ? (

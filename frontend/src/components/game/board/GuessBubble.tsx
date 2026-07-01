@@ -95,7 +95,7 @@ function MiniTile({
         damping: 22,
         delay: 0.04 * index,
       }}
-      className="w-9 h-11 grid place-items-center rounded-lg font-mono text-lg tabular-nums text-fg-primary"
+      className="w-8 h-10 grid place-items-center rounded-lg font-mono text-base tabular-nums text-fg-primary"
       style={{
         background: redacted
           ? "linear-gradient(160deg, #150E1E, #0A0610)"
@@ -172,11 +172,13 @@ export function Peg({
               "0 0 6px rgba(255,0,168,0.35), inset 0 1px 1px rgba(255,255,255,0.08)",
           }
         : {
+            // Miss — a clearly visible muted grey tumbler (not a near-black
+            // socket that reads as empty).
             width: size,
             height: size,
-            background: "radial-gradient(circle at 50% 35%, #0B0712, #05030A)",
+            background: "radial-gradient(circle at 35% 30%, #6B6472, #3A343F)",
             boxShadow:
-              "inset 0 1px 2px rgba(0,0,0,0.9), inset 0 -1px 1px rgba(255,255,255,0.04)",
+              "inset 0 1px 1px rgba(255,255,255,0.18), inset 0 -1px 2px rgba(0,0,0,0.55)",
           };
 
   return (

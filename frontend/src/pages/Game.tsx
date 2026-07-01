@@ -283,8 +283,13 @@ export default function Game() {
 
   // -------------- render --------------
 
+  const compact = stage === "active" || stage === "setting_codes";
   return (
-    <div className="max-w-5xl mx-auto px-5 md:px-8 py-10 md:py-16">
+    <div
+      className={`max-w-5xl mx-auto px-5 md:px-8 ${
+        compact ? "py-3" : "py-10 md:py-16"
+      }`}
+    >
       {err && <ErrorBar message={err} onClose={() => setErr(null)} />}
 
       {stage === "mode_pick" && (
