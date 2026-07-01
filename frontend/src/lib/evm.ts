@@ -136,8 +136,11 @@ export async function duelJoinGame(
   if (token && stake !== undefined) {
     await approveIfNeeded(token, DUEL_ADDRESS, stake, signer);
   }
+  // The backend stores the on-chain game id stripped of "0x"; ethers needs a
+  // 0x-prefixed 32-byte value for bytes32.
+  const id = gameId.startsWith("0x") ? gameId : `0x${gameId}`;
   const duel = new Contract(DUEL_ADDRESS, DUEL_ABI, signer);
-  const tx = await duel.joinGame(gameId);
+  const tx = await duel.joinGame(id);
   await tx.wait();
   return { txHash: tx.hash };
 }
