@@ -97,7 +97,8 @@ export async function emitCreateGame(args: {
   walletAddress: string;
   mode: string;
   asset?: string;
-  stakeAmount?: string;
+  /** Stake in token base units (bigint as string) — matches the on-chain tx. */
+  stakeBaseUnits?: string;
   /** Hash of the on-chain tx the player self-submitted (staked modes). */
   txHash?: string;
   /** On-chain game id from CrackdDuel.createGame (staked PvP). */

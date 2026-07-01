@@ -179,6 +179,7 @@ export default function Game() {
 
       let txHash: string | undefined;
       let contractGameId: string | undefined;
+      let stakeBaseUnits: string | undefined;
       if (mode === "vs_ai_staked" || mode === "pvp_staked") {
         if (!address) throw new Error("Sign in to stake");
         const chosen = assetsQ.data?.assets.find((a) => a.symbol === asset);
@@ -186,6 +187,7 @@ export default function Game() {
         const token = tokenAddress(chosen.symbol);
         if (!token) throw new Error(`No token address for ${chosen.symbol}`);
         const amount = toBaseUnits(stakeAmount ?? 0, chosen.decimals);
+        stakeBaseUnits = amount.toString();
         const provider = await getActiveProvider();
         const signer = await provider.getSigner();
         if (mode === "vs_ai_staked") {
@@ -202,7 +204,7 @@ export default function Game() {
         walletAddress: wallet,
         mode,
         asset,
-        stakeAmount: stakeAmount !== undefined ? String(stakeAmount) : undefined,
+        stakeBaseUnits,
         txHash,
         contractGameId,
       });
