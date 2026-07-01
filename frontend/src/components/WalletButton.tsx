@@ -127,17 +127,23 @@ function WalletMenu({
             )}
           </div>
 
-          <div className="mt-2.5 flex items-baseline gap-1.5">
+          <div className="mt-2.5 flex items-center gap-2">
+            <TokenLogo symbol="ETH" size={26} />
             <span className="text-[32px] leading-none font-semibold tabular-nums">
               {balancesQ.isLoading ? "…" : eth ? formatAmount(eth.amount) : "0"}
             </span>
             <span className="text-sm text-fg-muted">ETH</span>
-            <span className="ml-2 px-1.5 py-0.5 rounded-md text-[9px] uppercase tracking-[0.14em] bg-ink-raised text-fg-muted">
-              gas
+          </div>
+
+          {/* Gas-sponsored badge — players never buy Sepolia ETH */}
+          <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-2.5 py-1">
+            <SparkIcon />
+            <span className="text-[10px] uppercase tracking-[0.14em] text-accent font-medium">
+              Gas sponsored
             </span>
           </div>
 
-          {/* Token balances — one clean row each */}
+          {/* Token balances — one clean row each, with logos */}
           <div className="mt-3.5 space-y-1.5">
             {otherAssets.map((a) => (
               <div
@@ -145,9 +151,7 @@ function WalletMenu({
                 className="flex items-center justify-between rounded-lg bg-ink-elevated/70 border border-ink-border/60 px-2.5 py-2"
               >
                 <span className="flex items-center gap-2">
-                  <span className="grid place-items-center h-6 w-6 rounded-full bg-ink-raised text-[10px] font-semibold text-fg-secondary">
-                    {a.asset.slice(0, 1)}
-                  </span>
+                  <TokenLogo symbol={a.asset} size={24} />
                   <span className="text-sm text-fg-secondary">{a.asset}</span>
                 </span>
                 <span className="text-sm font-semibold tabular-nums text-fg-primary">
@@ -295,6 +299,63 @@ function CheckIcon() {
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function TokenLogo({ symbol, size = 24 }: { symbol: string; size?: number }) {
+  const s = symbol.toUpperCase();
+  if (s === "ETH" || s === "WETH") {
+    // Ethereum diamond (two-tone). WETH shares the mark.
+    return (
+      <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden>
+        <circle cx="16" cy="16" r="16" fill="#627EEA" />
+        <g fill="#FFF" fillRule="nonzero">
+          <path fillOpacity="0.6" d="M16.5 4v8.87l7.5 3.35z" />
+          <path d="M16.5 4L9 16.22l7.5-3.35z" />
+          <path fillOpacity="0.6" d="M16.5 21.97V28L24 17.62z" />
+          <path d="M16.5 28v-6.03L9 17.62z" />
+          <path fillOpacity="0.2" d="M16.5 20.57l7.5-4.35-7.5-3.35z" />
+          <path fillOpacity="0.6" d="M9 16.22l7.5 4.35v-7.7z" />
+        </g>
+      </svg>
+    );
+  }
+  if (s === "USDC") {
+    return (
+      <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden>
+        <circle cx="16" cy="16" r="16" fill="#2775CA" />
+        <text
+          x="16"
+          y="22"
+          textAnchor="middle"
+          fontSize="18"
+          fontWeight="700"
+          fill="#FFF"
+          fontFamily="system-ui, sans-serif"
+        >
+          $
+        </text>
+      </svg>
+    );
+  }
+  return (
+    <span
+      className="grid place-items-center rounded-full bg-ink-raised text-[10px] font-semibold text-fg-secondary"
+      style={{ width: size, height: size }}
+    >
+      {symbol.slice(0, 1)}
+    </span>
+  );
+}
+
+function SparkIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden className="text-accent">
+      <path
+        d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"
+        fill="currentColor"
       />
     </svg>
   );
