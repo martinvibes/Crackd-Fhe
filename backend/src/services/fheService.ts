@@ -40,13 +40,20 @@ export class FheService {
   private instance: RelayerInstance | null = null;
 
   constructor(cfg: AppConfig) {
-    this.provider = new ethers.JsonRpcProvider(cfg.EVM_RPC_URL, {
-      chainId: cfg.EVM_CHAIN_ID,
-      name: cfg.EVM_NETWORK,
-    });
+    // Longer request timeout + static network so a slow public RPC doesn't
+    // trip the default and 500 the seal.
+    const req = new ethers.FetchRequest(cfg.EVM_RPC_URL);
+    req.timeout = 60_000;
+    this.provider = new ethers.JsonRpcProvider(
+      req,
+      { chainId: cfg.EVM_CHAIN_ID, name: cfg.EVM_NETWORK },
+      { staticNetwork: true },
+    );
     this.admin = new ethers.Wallet(cfg.ADMIN_PRIVATE_KEY, this.provider);
     this.fheAddress = cfg.CRACKD_FHE_ADDRESS;
     this.rpcUrl = cfg.EVM_RPC_URL;
+    // Warm the relayer instance in the background so the first game isn't slow.
+    void this.getInstance().catch(() => {});
   }
 
   private async getInstance(): Promise<RelayerInstance> {
@@ -71,6 +78,19 @@ export class FheService {
    * plaintext code (kept server-side only, for win verification / analytics).
    */
   async sealVaultCode(): Promise<{ gameId: string; code: string }> {
+    let lastErr: unknown;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        return await this.sealOnce();
+      } catch (err) {
+        lastErr = err;
+        logger.warn({ err, attempt }, "confidential: seal attempt failed");
+      }
+    }
+    throw lastErr;
+  }
+
+  private async sealOnce(): Promise<{ gameId: string; code: string }> {
     const code = randomCode();
     const fhe = await this.getInstance();
     const input = fhe.createEncryptedInput(this.fheAddress, this.admin.address);

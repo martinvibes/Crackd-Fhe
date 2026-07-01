@@ -110,9 +110,11 @@ export function onboardingRouter(services: Services, _cfg: AppConfig): Router {
   r.post("/confidential/new", async (req, res, next) => {
     try {
       const { walletAddress } = body.parse(req.body);
-      // Fund gas first (guesses are on-chain), then seal the Vault code.
-      await services.fhe.dripGas(walletAddress);
+      // Seal the Vault's code (the core step). Gas is topped up client-side
+      // before each guess, so we don't drip here — keeps the seal fast and
+      // avoids a second admin tx that can time out / race nonces.
       const { gameId } = await services.fhe.sealVaultCode();
+      void services.fhe.dripGas(walletAddress).catch(() => {});
       res.json({ ok: true, gameId });
     } catch (err) {
       if (err instanceof z.ZodError) {
