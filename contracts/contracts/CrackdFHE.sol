@@ -109,9 +109,21 @@ contract CrackdFHE is ZamaEthereumConfig {
             g.secret[i] = d;
             // The contract must retain access to recompute against future guesses.
             FHE.allowThis(d);
+            // The setter may decrypt their own code (e.g. a "reveal" button) —
+            // it stays hidden from everyone else and from the chain.
+            FHE.allow(d, msg.sender);
         }
 
         emit GameCreated(gameId, msg.sender);
+    }
+
+    /**
+     * The encrypted secret handles for `gameId`. Only the setter has ACL to
+     * decrypt them (see createGame) — everyone else gets ciphertext they can't
+     * read. Lets the code-owner reveal their own code via the relayer.
+     */
+    function getSecret(bytes32 gameId) external view returns (euint8[CODE_LEN] memory) {
+        return _games[gameId].secret;
     }
 
     // ----------------------------- guess ---------------------------------

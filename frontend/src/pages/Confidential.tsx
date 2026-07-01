@@ -1,16 +1,26 @@
 /**
- * Confidential vs-AI — the SAME game board as the normal game, but the Vault's
- * code is sealed on-chain as FHE ciphertext and every guess you make is scored
- * BY THE CONTRACT on the encrypted code (you sign a tx per guess). Same flow,
- * same UI as /play; the confidentiality just happens underneath.
+ * Confidential DUEL — the SAME game board as the normal game, but BOTH codes
+ * are sealed on-chain as FHE ciphertext:
+ *   • The Vault's code is sealed by the backend; you crack it.
+ *   • YOUR code is sealed by your wallet; the Vault cracks it back.
+ * Every guess is scored BY THE CONTRACT on the encrypted code and the pegs
+ * decrypt only for the guesser. Same flow, same UI as /play — the
+ * confidentiality (and the two-sided race) just happens underneath.
  */
 import { useState, useCallback, useMemo } from "react";
+import type { Signer } from "ethers";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { useWalletStore } from "../store/walletStore";
 import { getActiveProvider } from "../lib/wallet";
-import { fheConfigured, scoreGuessOnChain, FHE_EXPLORER } from "../lib/fheGame";
+import {
+  fheConfigured,
+  scoreGuessOnChain,
+  sealCode,
+  decryptOwnCode,
+  FHE_EXPLORER,
+} from "../lib/fheGame";
 import WalletButton from "../components/WalletButton";
 import { Spinner } from "../components/Spinner";
 import { PlayBackground } from "../components/game/PlayBackground";
@@ -33,30 +43,46 @@ export default function Confidential() {
 }
 
 function Game({ address }: { address: string }) {
-  const [phase, setPhase] = useState<"start" | "active" | "finished">("start");
-  const [gameId, setGameId] = useState("");
-  const [rounds, setRounds] = useState<Round[]>([]);
+  const [phase, setPhase] = useState<"start" | "playing" | "finished">("start");
+  // vaultGameId  = the Vault's sealed code (you crack it)
+  // playerGameId = your sealed code (the Vault cracks it)
+  const [vaultGameId, setVaultGameId] = useState("");
+  const [playerGameId, setPlayerGameId] = useState("");
+  const [myCode, setMyCode] = useState("");
+  const [localStatus, setLocalStatus] = useState<"setting_codes" | "active">(
+    "setting_codes",
+  );
+  const [currentTurn, setCurrentTurn] = useState<"you" | "vault">("you");
+  const [yourGuesses, setYourGuesses] = useState<Round[]>([]); // vs the Vault
+  const [vaultGuesses, setVaultGuesses] = useState<Round[]>([]); // vs you
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<"cracked" | "failed" | null>(null);
+  const [result, setResult] = useState<"cracked" | "failed" | "draw" | null>(null);
   const [taunt, setTaunt] = useState<string | null>(null);
 
-  const getSigner = useCallback(async () => {
+  const getSigner = useCallback(async (): Promise<Signer> => {
     const provider = await getActiveProvider();
     return provider.getSigner();
   }, []);
 
+  // Start: the backend seals a fresh Vault code on-chain. You then set + seal
+  // your own code in the board's "setting_codes" step.
   const start = useCallback(async () => {
     setError(null);
     setBusy(true);
     setStatus("Sealing the Vault's code on-chain…");
     try {
       const { gameId } = await api.confidentialNew(address);
-      setGameId(gameId);
-      setRounds([]);
+      setVaultGameId(gameId);
+      setPlayerGameId("");
+      setMyCode("");
+      setYourGuesses([]);
+      setVaultGuesses([]);
       setResult(null);
-      setPhase("active");
+      setCurrentTurn("you");
+      setLocalStatus("setting_codes");
+      setPhase("playing");
     } catch (e) {
       setError(friendly(e));
     } finally {
@@ -65,10 +91,37 @@ function Game({ address }: { address: string }) {
     }
   }, [address]);
 
-  // The Board calls this on each guess. We score on-chain and append the round.
+  // Step 1 (from the Board): seal YOUR secret code on-chain from your wallet.
+  const onSetCode = useCallback(
+    async (raw: string): Promise<{ ok: boolean; error?: string }> => {
+      const code = raw.replace(/\D/g, "").slice(0, 4);
+      if (code.length !== 4) return { ok: false, error: "Enter 4 digits" };
+      if (new Set(code).size !== 4)
+        return { ok: false, error: "Use 4 different digits (no repeats)" };
+      try {
+        const signer = await getSigner();
+        try {
+          await api.gas(await signer.getAddress());
+        } catch {
+          /* best-effort gas top-up */
+        }
+        const { gameId } = await sealCode(signer, code.split("").map(Number));
+        setPlayerGameId(gameId);
+        setMyCode(code);
+        setLocalStatus("active");
+        setCurrentTurn("you");
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, error: friendly(e) };
+      }
+    },
+    [getSigner],
+  );
+
+  // Each round: YOUR guess vs the Vault's code, then the Vault's guess vs yours.
   const onGuess = useCallback(
-    async (guess: string): Promise<{ ok: boolean; error?: string }> => {
-      const code = guess.replace(/\D/g, "").slice(0, 4);
+    async (raw: string): Promise<{ ok: boolean; error?: string }> => {
+      const code = raw.replace(/\D/g, "").slice(0, 4);
       if (code.length !== 4) return { ok: false, error: "Enter 4 digits" };
       try {
         const signer = await getSigner();
@@ -77,91 +130,142 @@ function Game({ address }: { address: string }) {
         } catch {
           /* best-effort gas top-up */
         }
-        const res = await scoreGuessOnChain(signer, gameId, code.split("").map(Number));
-        setRounds((prev) => {
-          const next = [
-            ...prev,
-            { code, result: { pots: res.pots, pans: res.pans }, timestamp: Date.now() },
-          ];
-          const cracked = res.solved || res.pots === 4;
-          if (cracked) {
-            setResult("cracked");
-            setPhase("finished");
-          } else if (next.length >= MAX_GUESSES) {
-            setResult("failed");
-            setPhase("finished");
-          } else {
-            // The Vault reacts to every guess (shown in its speech bubble).
-            setTaunt(vaultReaction(res.pots, res.pans, MAX_GUESSES - next.length));
-            window.setTimeout(() => setTaunt(null), 6000);
-          }
-          return next;
-        });
+
+        // --- Your move: score against the Vault's sealed code ---
+        const yr = await scoreGuessOnChain(
+          signer,
+          vaultGameId,
+          code.split("").map(Number),
+        );
+        const myNext = [
+          ...yourGuesses,
+          { code, result: { pots: yr.pots, pans: yr.pans }, timestamp: Date.now() },
+        ];
+        setYourGuesses(myNext);
+        if (yr.solved || yr.pots === 4) {
+          setResult("cracked");
+          setPhase("finished");
+          return { ok: true };
+        }
+
+        // --- The Vault's move: it guesses against YOUR sealed code ---
+        setCurrentTurn("vault");
+        const history = vaultGuesses.map((g) => ({
+          guess: g.code,
+          pots: g.result.pots,
+          pans: g.result.pans,
+        }));
+        const vg = await api.confidentialVaultGuess(playerGameId, history);
+        setVaultGuesses((prev) => [
+          ...prev,
+          {
+            code: vg.guess,
+            result: { pots: vg.pots, pans: vg.pans },
+            timestamp: Date.now(),
+          },
+        ]);
+        setTaunt(vaultReaction(vg.pots, vg.pans, MAX_GUESSES - myNext.length));
+        window.setTimeout(() => setTaunt(null), 6000);
+
+        if (vg.solved || vg.pots === 4) {
+          setResult("failed");
+          setPhase("finished");
+          return { ok: true };
+        }
+        if (myNext.length >= MAX_GUESSES) {
+          setResult("draw");
+          setPhase("finished");
+          return { ok: true };
+        }
+        setCurrentTurn("you");
         return { ok: true };
       } catch (e) {
+        setCurrentTurn("you");
         return { ok: false, error: friendly(e) };
       }
     },
-    [gameId, getSigner],
+    [vaultGameId, playerGameId, yourGuesses, vaultGuesses, getSigner],
   );
 
   // Synthetic view so we can reuse the exact normal-game Board.
   const view: SafeGameView = useMemo(
     () => ({
-      gameId,
+      gameId: vaultGameId,
       mode: "vs_ai_free",
-      status: "active",
+      status: phase === "finished" ? "finished" : localStatus,
       you: "playerOne",
       youAre: address,
       opponent: "vault",
-      // You're the cracker here — you have no secret of your own. Leave it
-      // unset (shows dots) so the tile doesn't render the literal "sealed".
-      yourCode: undefined,
+      // Your own secret, shown in the YOU tile once you've sealed it.
+      yourCode: myCode || undefined,
       opponentCodeSet: true,
-      yourGuesses: rounds,
-      opponentGuesses: [],
-      currentTurn: "playerOne", // always your move — you're the cracker
-      winner: null,
-      isDraw: false,
+      yourGuesses,
+      opponentGuesses: vaultGuesses, // codes visible so you see the Vault's guesses
+      currentTurn: currentTurn === "you" ? "playerOne" : "playerTwo",
+      winner:
+        result === "cracked" ? address : result === "failed" ? "vault" : null,
+      isDraw: result === "draw",
       stakeAmount: 0,
       stakeAsset: null,
       maxGuesses: MAX_GUESSES,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     }),
-    [gameId, address, rounds],
+    [
+      vaultGameId,
+      address,
+      myCode,
+      localStatus,
+      phase,
+      currentTurn,
+      result,
+      yourGuesses,
+      vaultGuesses,
+    ],
   );
 
   return (
     <div className="relative max-w-3xl mx-auto px-5 md:px-8 py-6">
-      <PlayBackground intense={phase === "active"} />
+      <PlayBackground intense={phase === "playing"} />
       <div className="relative z-10">
         {/* slim confidential ribbon + gas */}
         <div className="flex items-center justify-between gap-3">
           <span className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.24em] text-accent">
-            <LockIcon /> Confidential · Zama fhEVM
+            <LockIcon /> Confidential Duel · Zama fhEVM
           </span>
-          <GasChip address={address} />
+          <div className="flex items-center gap-4">
+            {playerGameId && (
+              <RevealCodeChip getSigner={getSigner} gameId={playerGameId} />
+            )}
+            <GasChip address={address} />
+          </div>
         </div>
 
         {phase === "start" && (
           <StartScreen onStart={start} busy={busy} status={status} error={error} />
         )}
 
-        {phase === "active" && (
+        {phase === "playing" && (
           <div className="mt-4">
             <Board
               walletAddress={address}
               view={view}
               tauntLine={taunt}
-              onSetCode={async () => ({ ok: true })}
+              onSetCode={onSetCode}
               onGuess={onGuess}
             />
           </div>
         )}
 
         {phase === "finished" && result && (
-          <FinishScreen result={result} attempts={rounds.length} onReset={start} />
+          <FinishScreen
+            result={result}
+            attempts={yourGuesses.length}
+            myCode={myCode}
+            getSigner={getSigner}
+            playerGameId={playerGameId}
+            onReset={start}
+          />
         )}
       </div>
     </div>
@@ -186,13 +290,14 @@ function StartScreen({
   return (
     <div className="mt-10 max-w-xl mx-auto text-center animate-fade-in">
       <h1 className="text-3xl md:text-4xl font-semibold tracking-[-0.02em]">
-        Crack the Vault's <span className="text-accent">sealed code.</span>
+        A duel of <span className="text-accent">sealed codes.</span>
       </h1>
       <p className="mt-3 text-fg-secondary">
-        The Vault picks a secret 4-digit code and seals it on-chain as FHE
-        ciphertext. You get {MAX_GUESSES} guesses — each one is scored{" "}
+        You and the Vault each seal a secret 4-digit code on-chain as FHE
+        ciphertext, then race to crack each other's. Every guess is scored{" "}
         <span className="text-fg-primary">by the contract, on the encrypted
-        code</span>. The code is never revealed, not even to us.
+        code</span> — neither code is ever revealed, not even to us. First to
+        crack wins, within {MAX_GUESSES} guesses.
       </p>
 
       <div className="mt-6 flex items-center justify-center gap-2">
@@ -217,7 +322,7 @@ function StartScreen({
         className="btn-primary mt-7 cursor-pointer disabled:cursor-wait inline-flex items-center justify-center gap-2"
       >
         {busy && <Spinner />}
-        {busy ? status ?? "Sealing the Vault…" : "Seal the Vault & play"}
+        {busy ? status ?? "Sealing the Vault…" : "Start the duel"}
       </button>
       {error && <div className="mt-4 text-sm text-danger">{error}</div>}
 
@@ -240,35 +345,120 @@ function StartScreen({
 function FinishScreen({
   result,
   attempts,
+  myCode,
+  getSigner,
+  playerGameId,
   onReset,
 }: {
-  result: "cracked" | "failed";
+  result: "cracked" | "failed" | "draw";
   attempts: number;
+  myCode: string;
+  getSigner: () => Promise<Signer>;
+  playerGameId: string;
   onReset: () => void;
 }) {
   const win = result === "cracked";
+  const title =
+    result === "cracked"
+      ? "You cracked the Vault."
+      : result === "failed"
+        ? "The Vault cracked you first."
+        : "Stalemate — both codes held.";
+  const body =
+    result === "cracked"
+      ? `You broke the Vault in ${attempts} guess${attempts === 1 ? "" : "es"} — before it broke you. Every peg was scored on the encrypted codes, which were never revealed on-chain.`
+      : result === "failed"
+        ? `The Vault decoded your sealed code before you cracked its. Both codes stayed encrypted the whole duel — the contract scored every move without ever exposing them.`
+        : `Neither side cracked the other in ${MAX_GUESSES} guesses. Both codes stayed sealed on-chain the entire time.`;
   return (
     <div className="mt-12 max-w-xl mx-auto text-center animate-slide-up">
       <div className="mx-auto grid place-items-center h-14 w-14 rounded-2xl bg-accent/10 text-accent">
         {win ? <UnlockIcon /> : <ShieldIcon />}
       </div>
       <h1 className="mt-5 text-3xl md:text-4xl font-semibold tracking-[-0.02em]">
-        {win ? "You cracked the Vault." : "The Vault held."}
+        {title}
       </h1>
-      <p className="mt-3 text-fg-secondary">
-        {win
-          ? `Cracked in ${attempts} guess${attempts === 1 ? "" : "es"} — every one scored on the encrypted code, which was never revealed on-chain.`
-          : `Out of guesses. The Vault's code stayed sealed the whole game — the contract scored you without ever exposing it.`}
-      </p>
+      <p className="mt-3 text-fg-secondary">{body}</p>
+
+      {myCode && (
+        <div className="mt-6">
+          <RevealCodeChip getSigner={getSigner} gameId={playerGameId} big />
+        </div>
+      )}
+
       <div className="mt-6 flex items-center justify-center gap-3">
         <button onClick={onReset} className="btn-primary cursor-pointer">
-          New game
+          New duel
         </button>
         <Link to="/play" className="btn-ghost cursor-pointer">
           Classic modes
         </Link>
       </div>
     </div>
+  );
+}
+
+/**
+ * "Decrypt my code" — reads your OWN sealed code back from the chain as
+ * ciphertext and user-decrypts it via the relayer. Proves the digits lived
+ * on-chain encrypted the whole time (only you hold the ACL to reveal them).
+ */
+function RevealCodeChip({
+  getSigner,
+  gameId,
+  big,
+}: {
+  getSigner: () => Promise<Signer>;
+  gameId: string;
+  big?: boolean;
+}) {
+  const [state, setState] = useState<"idle" | "loading" | "done" | "error">(
+    "idle",
+  );
+  const [code, setCode] = useState<string | null>(null);
+
+  async function reveal() {
+    if (state === "loading") return;
+    setState("loading");
+    try {
+      const signer = await getSigner();
+      const decrypted = await decryptOwnCode(signer, gameId);
+      setCode(decrypted);
+      setState("done");
+    } catch {
+      setState("error");
+      setTimeout(() => setState("idle"), 2500);
+    }
+  }
+
+  if (state === "done" && code) {
+    return (
+      <span
+        className={`inline-flex items-center gap-2 ${big ? "text-base" : "text-xs"}`}
+        title="Decrypted from on-chain ciphertext"
+      >
+        <UnlockIcon />
+        <span className="text-fg-muted">Your sealed code:</span>
+        <span className="font-mono tracking-[0.3em] text-accent">{code}</span>
+      </span>
+    );
+  }
+
+  return (
+    <button
+      onClick={reveal}
+      disabled={state === "loading"}
+      className={`inline-flex items-center gap-1.5 font-medium text-accent hover:underline disabled:opacity-60 cursor-pointer whitespace-nowrap ${
+        big ? "text-sm" : "text-xs"
+      }`}
+    >
+      {state === "loading" ? <Spinner size={12} /> : <LockIcon />}
+      {state === "loading"
+        ? "Decrypting…"
+        : state === "error"
+          ? "Couldn't decrypt — retry"
+          : "Decrypt my code"}
+    </button>
   );
 }
 

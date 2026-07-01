@@ -12,7 +12,7 @@
  * the clear — that's the whole point.
  */
 import { Contract, type Signer } from "ethers";
-import { encryptCode, decryptFeedback } from "./fhe";
+import { encryptCode, decryptFeedback, decryptEuint8 } from "./fhe";
 
 const FHE_ADDRESS = import.meta.env.VITE_CRACKD_FHE_ADDRESS as string;
 
@@ -29,9 +29,25 @@ const ABI = [
   "function createGame(bytes32[4] encDigits, bytes proof) returns (bytes32)",
   "function submitGuess(bytes32 gameId, uint8[4] guess)",
   "function getFeedback(bytes32 gameId, address guesser) view returns (bytes32 black, bytes32 white, bytes32 solved, uint32 guessIndex)",
+  "function getSecret(bytes32 gameId) view returns (bytes32[4])",
   "function closeGame(bytes32 gameId)",
   "event GameCreated(bytes32 indexed gameId, address indexed setter)",
 ];
+
+/**
+ * Reveal your OWN sealed code: read the encrypted secret handles from chain and
+ * user-decrypt them (only the setter has ACL). Proves the code was stored as
+ * ciphertext the whole time.
+ */
+export async function decryptOwnCode(
+  signer: Signer,
+  gameId: string,
+): Promise<string> {
+  const contract = new Contract(FHE_ADDRESS, ABI, signer);
+  const handles = (await contract.getSecret(gameId)) as string[];
+  const digits = await decryptEuint8([...handles], FHE_ADDRESS, signer);
+  return digits.join("");
+}
 
 /**
  * Encrypt + commit a secret code. Returns the on-chain game id and the

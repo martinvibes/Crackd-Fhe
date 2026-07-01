@@ -89,6 +89,45 @@ export async function encryptCode(
   return input.encrypt();
 }
 
+/**
+ * User-decrypt a list of euint8 ciphertext handles the caller has ACL for.
+ * Returns the plaintext numbers in the same order. Shared by feedback
+ * decryption and "reveal my sealed code".
+ */
+export async function decryptEuint8(
+  handles: string[],
+  contractAddr: string,
+  signer: Signer,
+): Promise<number[]> {
+  const fhe = await getFheInstance();
+  const userAddress = await signer.getAddress();
+  const { publicKey, privateKey } = fhe.generateKeypair();
+  const startTimestamp = Math.floor(Date.now() / 1000);
+  const durationDays = 7;
+  const contractAddresses = [contractAddr];
+  const eip712 = fhe.createEIP712(publicKey, contractAddresses, startTimestamp, durationDays);
+  const types = eip712.types as Record<string, unknown> & {
+    UserDecryptRequestVerification?: unknown;
+  };
+  const signature = await signer.signTypedData(
+    eip712.domain as never,
+    { UserDecryptRequestVerification: types.UserDecryptRequestVerification } as never,
+    eip712.message as never,
+  );
+  const pairs = handles.map((h) => ({ handle: h, contractAddress: contractAddr }));
+  const result = await fhe.userDecrypt(
+    pairs,
+    privateKey,
+    publicKey,
+    signature.replace(/^0x/, ""),
+    contractAddresses,
+    userAddress,
+    startTimestamp,
+    durationDays,
+  );
+  return handles.map((h) => Number(result[h] ?? 0));
+}
+
 export interface DecryptedFeedback {
   black: number;
   white: number;

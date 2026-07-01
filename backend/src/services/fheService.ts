@@ -19,6 +19,8 @@ import { logger } from "../utils/logger.js";
 
 const FHE_ABI = [
   "function createGame(bytes32[4] encDigits, bytes proof) returns (bytes32)",
+  "function submitGuess(bytes32 gameId, uint8[4] guess)",
+  "function getFeedback(bytes32 gameId, address guesser) view returns (bytes32 black, bytes32 white, bytes32 solved, uint32 guessIndex)",
   "event GameCreated(bytes32 indexed gameId, address indexed setter)",
 ];
 
@@ -30,6 +32,23 @@ type RelayerInstance = {
     add8: (v: number) => unknown;
     encrypt: () => Promise<{ handles: Uint8Array[]; inputProof: Uint8Array }>;
   };
+  generateKeypair: () => { publicKey: string; privateKey: string };
+  createEIP712: (
+    publicKey: string,
+    contractAddresses: string[],
+    start: number,
+    days: number,
+  ) => { domain: Record<string, unknown>; types: Record<string, unknown>; message: Record<string, unknown> };
+  userDecrypt: (
+    handles: { handle: string; contractAddress: string }[],
+    privateKey: string,
+    publicKey: string,
+    signature: string,
+    contractAddresses: string[],
+    userAddress: string,
+    start: number,
+    days: number,
+  ) => Promise<Record<string, bigint | boolean>>;
 };
 
 export class FheService {
@@ -125,6 +144,53 @@ export class FheService {
     if (!gameId) throw new Error("failed to seal Vault code (no GameCreated)");
     logger.info({ gameId }, "confidential: sealed Vault code");
     return { gameId, code };
+  }
+
+  /**
+   * The Vault's move: submit `guess` against the PLAYER's sealed code
+   * (playerGameId), scored on-chain on the ciphertext, then decrypt the pegs
+   * (admin is the guesser, so the feedback is ACL'd to admin).
+   */
+  async scoreAsVault(
+    playerGameId: string,
+    guess: number[],
+  ): Promise<{ pots: number; pans: number; solved: boolean }> {
+    const contract = new ethers.Contract(this.fheAddress, FHE_ABI, this.admin);
+    const tx = await contract.getFunction("submitGuess")(playerGameId, guess);
+    await tx.wait();
+
+    const fb = await contract.getFunction("getFeedback")(playerGameId, this.admin.address);
+    const fhe = await this.getInstance();
+    const { publicKey, privateKey } = fhe.generateKeypair();
+    const start = Math.floor(Date.now() / 1000);
+    const days = 7;
+    const cts = [this.fheAddress];
+    const eip = fhe.createEIP712(publicKey, cts, start, days);
+    const types = eip.types as { UserDecryptRequestVerification?: unknown };
+    const sig = await this.admin.signTypedData(
+      eip.domain as never,
+      { UserDecryptRequestVerification: types.UserDecryptRequestVerification } as never,
+      eip.message as never,
+    );
+    const pairs = [fb.black, fb.white, fb.solved].map((h: string) => ({
+      handle: h,
+      contractAddress: this.fheAddress,
+    }));
+    const res = await fhe.userDecrypt(
+      pairs,
+      privateKey,
+      publicKey,
+      sig.replace(/^0x/, ""),
+      cts,
+      this.admin.address,
+      start,
+      days,
+    );
+    return {
+      pots: Number(res[fb.black] ?? 0),
+      pans: Number(res[fb.white] ?? 0),
+      solved: Boolean(res[fb.solved] ?? false),
+    };
   }
 
   /** Top a player up with a little Sepolia ETH so they can submit guesses. */

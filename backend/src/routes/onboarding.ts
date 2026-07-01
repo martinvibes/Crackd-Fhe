@@ -16,6 +16,7 @@ import { z } from "zod";
 import type { Services } from "../services/services.js";
 import type { AppConfig } from "../config.js";
 import type { AssetSymbol } from "../services/assets.js";
+import { pickVaultGuess } from "../services/solver.js";
 
 const body = z.object({
   walletAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/, "Invalid EVM address"),
@@ -71,6 +72,43 @@ export function onboardingRouter(services: Services, _cfg: AppConfig): Router {
       // Top up gas to target (no-ops if already funded enough).
       const gasTx = await services.chain.dripGas(walletAddress);
       res.json({ ok: true, asset, amount: amountHuman, tokenTx: txHash, gasTx });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid request" });
+        return;
+      }
+      next(err);
+    }
+  });
+
+  /**
+   * POST /api/confidential/vault-guess  { playerGameId, history }
+   *
+   * The Vault's turn in the two-sided confidential duel: pick a guess (solver)
+   * consistent with its prior real feedback, submit it against the PLAYER's
+   * sealed code on-chain, and return the pegs (decrypted admin-side).
+   */
+  r.post("/confidential/vault-guess", async (req, res, next) => {
+    try {
+      const schema = z.object({
+        playerGameId: z.string().regex(/^0x[0-9a-fA-F]{64}$/, "bad game id"),
+        history: z
+          .array(
+            z.object({
+              guess: z.string().regex(/^\d{4}$/),
+              pots: z.number().int().min(0).max(4),
+              pans: z.number().int().min(0).max(4),
+            }),
+          )
+          .default([]),
+      });
+      const { playerGameId, history } = schema.parse(req.body);
+      const guess = pickVaultGuess(history);
+      const scored = await services.fhe.scoreAsVault(
+        playerGameId,
+        guess.split("").map(Number),
+      );
+      res.json({ ok: true, guess, ...scored });
     } catch (err) {
       if (err instanceof z.ZodError) {
         res.status(400).json({ error: "Invalid request" });
