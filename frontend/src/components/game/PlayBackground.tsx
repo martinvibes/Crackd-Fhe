@@ -37,7 +37,7 @@ export function PlayBackground({ intense = false }: { intense?: boolean }) {
         char: String(Math.floor(Math.random() * 10)),
         left: Math.random() * 100,
         top: Math.random() * 100,
-        size: 10 + Math.random() * 14,
+        size: 7 + Math.random() * 7,
         delay: Math.random() * 8,
         dur: 7 + Math.random() * 10,
         float: FLOATS[i % FLOATS.length],
@@ -114,7 +114,7 @@ export function PlayBackground({ intense = false }: { intense?: boolean }) {
             top: `${d.top}%`,
             fontSize: d.size,
             color: d.magenta ? "rgba(255,0,168,0.9)" : "rgba(255,255,255,0.9)",
-            filter: "blur(1.6px)",
+            filter: "blur(2px)",
             animation: `crackd-float-${d.float} ${d.dur}s ease-in-out ${d.delay}s infinite`,
           }}
         >
