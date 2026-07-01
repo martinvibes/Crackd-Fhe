@@ -11,6 +11,7 @@ import { BackLink } from "./BackLink";
 import { modeLabel, type Mode } from "./ModePicker";
 import { api } from "../../lib/api";
 import { useWalletStore } from "../../store/walletStore";
+import { useQueryClient } from "@tanstack/react-query";
 
 const STAKE_PRESETS = [1, 5, 10, 25] as const;
 
@@ -42,48 +43,80 @@ const MULTIPLIER_TIERS: Array<{
  */
 function TokenFaucet({ asset }: { asset: string; assets: Asset[] }) {
   const address = useWalletStore((s) => s.address);
-  const [busy, setBusy] = useState(false);
+  const qc = useQueryClient();
+  const [state, setState] = useState<"idle" | "sending" | "done">("idle");
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const amount = asset.toUpperCase() === "USDC" ? 1000 : 10;
 
   async function mint() {
-    if (!address) return;
+    if (!address || state === "sending") return;
     setErr(null);
     setMsg(null);
-    setBusy(true);
+    setState("sending");
     try {
       // Server-side: admin mints tokens + drips a little gas ETH once, so a
       // fresh wallet never needs ETH before it can stake.
       const res = await api.faucet(address, asset);
       setMsg(
         res.gasTx
-          ? `Sent ${res.amount} ${asset} + gas ✓`
-          : `Sent ${res.amount} ${asset} ✓`,
+          ? `${res.amount} ${asset} + gas landed in your wallet`
+          : `${res.amount} ${asset} landed in your wallet`,
       );
+      setState("done");
+      // Refresh the wallet balances so the new tokens show immediately.
+      qc.invalidateQueries({ queryKey: ["balances", address] });
+      setTimeout(() => setState("idle"), 4000);
     } catch (e) {
       setErr((e as Error).message?.slice(0, 140) ?? "Faucet failed");
-    } finally {
-      setBusy(false);
+      setState("idle");
     }
   }
 
+  const done = state === "done";
+  const sending = state === "sending";
+
   return (
     <div className="mt-3">
-      <div className="flex items-center justify-between gap-3 rounded-lg border border-ink-border bg-ink-elevated px-3 py-2">
-        <span className="text-xs text-fg-muted">
+      <div
+        className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-2 transition-colors ${
+          done
+            ? "border-accent/40 bg-accent/10"
+            : "border-ink-border bg-ink-elevated"
+        }`}
+      >
+        <span className={`text-xs flex items-center gap-1.5 ${done ? "text-accent" : "text-fg-muted"}`}>
+          {done && <FaucetCheck />}
           {msg ?? `Need test ${asset}? Get ${amount.toLocaleString()} free (gas included).`}
         </span>
         <button
           onClick={mint}
-          disabled={busy || !address}
-          className="text-xs font-medium text-accent hover:underline disabled:opacity-50 cursor-pointer whitespace-nowrap"
+          disabled={sending || !address}
+          className="text-xs font-medium text-accent hover:underline disabled:opacity-60 cursor-pointer whitespace-nowrap inline-flex items-center gap-1.5"
         >
-          {busy ? "Sending…" : `Get ${asset}`}
+          {sending && <FaucetSpinner />}
+          {sending ? "Sending…" : done ? "Get more" : `Get ${asset}`}
         </button>
       </div>
       {err && <div className="mt-1 text-[11px] text-danger">{err}</div>}
     </div>
+  );
+}
+
+function FaucetSpinner() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden className="animate-spin">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" strokeOpacity="0.25" />
+      <path d="M21 12a9 9 0 00-9-9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function FaucetCheck() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M5 12.5l4.5 4.5L19 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 

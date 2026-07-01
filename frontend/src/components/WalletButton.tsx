@@ -112,35 +112,50 @@ function WalletMenu({
         aria-hidden
       />
       <div className="absolute right-0 mt-2 w-80 panel-elevated z-50 p-0 animate-slide-up overflow-hidden">
-        {/* Header — kind label + balance hero */}
-        <div className="px-4 pt-4 pb-3 bg-gradient-to-b from-accent/5 to-transparent">
-          <div className="text-[10px] uppercase tracking-[0.22em] text-fg-muted">
-            {kindLabel}
-          </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-2xl font-semibold tabular-nums">
-              {balancesQ.isLoading
-                ? "…"
-                : eth
-                  ? formatAmount(eth.amount)
-                  : "0"}
-            </span>
-            <span className="text-xs text-fg-muted">ETH</span>
-            {balancesQ.isFetching && !balancesQ.isLoading && (
+        {/* Header — kind label + ETH gas hero */}
+        <div className="px-4 pt-4 pb-4 bg-gradient-to-b from-accent/10 to-transparent">
+          <div className="flex items-center justify-between">
+            <div className="text-[10px] uppercase tracking-[0.22em] text-fg-muted">
+              {kindLabel}
+            </div>
+            {balancesQ.isFetching && (
               <span
                 aria-hidden
-                className="ml-auto inline-block h-1.5 w-1.5 rounded-full bg-accent/60 animate-pulse"
-                title="Refreshing balance"
+                className="inline-block h-1.5 w-1.5 rounded-full bg-accent/60 animate-pulse"
+                title="Refreshing balances"
               />
             )}
           </div>
-          {otherAssets.length > 0 && (
-            <div className="mt-1 text-xs text-fg-muted tabular-nums">
-              {otherAssets
-                .map((a) => `${formatAmount(a.amount)} ${a.asset}`)
-                .join(" · ")}
-            </div>
-          )}
+
+          <div className="mt-2.5 flex items-baseline gap-1.5">
+            <span className="text-[32px] leading-none font-semibold tabular-nums">
+              {balancesQ.isLoading ? "…" : eth ? formatAmount(eth.amount) : "0"}
+            </span>
+            <span className="text-sm text-fg-muted">ETH</span>
+            <span className="ml-2 px-1.5 py-0.5 rounded-md text-[9px] uppercase tracking-[0.14em] bg-ink-raised text-fg-muted">
+              gas
+            </span>
+          </div>
+
+          {/* Token balances — one clean row each */}
+          <div className="mt-3.5 space-y-1.5">
+            {otherAssets.map((a) => (
+              <div
+                key={a.asset}
+                className="flex items-center justify-between rounded-lg bg-ink-elevated/70 border border-ink-border/60 px-2.5 py-2"
+              >
+                <span className="flex items-center gap-2">
+                  <span className="grid place-items-center h-6 w-6 rounded-full bg-ink-raised text-[10px] font-semibold text-fg-secondary">
+                    {a.asset.slice(0, 1)}
+                  </span>
+                  <span className="text-sm text-fg-secondary">{a.asset}</span>
+                </span>
+                <span className="text-sm font-semibold tabular-nums text-fg-primary">
+                  {balancesQ.isLoading ? "…" : formatAmount(a.amount)}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="divider" />
