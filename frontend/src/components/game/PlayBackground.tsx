@@ -16,11 +16,11 @@ const FLOATS = ["a", "b", "c", "d"] as const;
 export function PlayBackground({ intense = false }: { intense?: boolean }) {
   const stars = useMemo(
     () =>
-      Array.from({ length: 90 }, (_, i) => ({
+      Array.from({ length: 46 }, (_, i) => ({
         id: i,
         left: Math.random() * 100,
         top: Math.random() * 100,
-        size: 1 + Math.random() * 2.4,
+        size: 1 + Math.random() * 1.8,
         delay: Math.random() * 6,
         dur: 3 + Math.random() * 5,
         magenta: i % 4 === 0,
@@ -32,12 +32,12 @@ export function PlayBackground({ intense = false }: { intense?: boolean }) {
   // float paths so the motion looks organic rather than uniform.
   const digits = useMemo(
     () =>
-      Array.from({ length: 70 }, (_, i) => ({
+      Array.from({ length: 34 }, (_, i) => ({
         id: i,
         char: String(Math.floor(Math.random() * 10)),
         left: Math.random() * 100,
         top: Math.random() * 100,
-        size: 12 + Math.random() * 26,
+        size: 10 + Math.random() * 14,
         delay: Math.random() * 8,
         dur: 7 + Math.random() * 10,
         float: FLOATS[i % FLOATS.length],
@@ -98,6 +98,7 @@ export function PlayBackground({ intense = false }: { intense?: boolean }) {
             height: s.size,
             background: s.magenta ? "#FF6FD0" : "rgba(255,255,255,0.8)",
             boxShadow: s.magenta ? "0 0 6px rgba(255,0,168,0.85)" : "none",
+            filter: "blur(0.8px)",
             animation: `crackd-twinkle ${s.dur}s ease-in-out ${s.delay}s infinite`,
           }}
         />
@@ -113,6 +114,7 @@ export function PlayBackground({ intense = false }: { intense?: boolean }) {
             top: `${d.top}%`,
             fontSize: d.size,
             color: d.magenta ? "rgba(255,0,168,0.9)" : "rgba(255,255,255,0.9)",
+            filter: "blur(1.6px)",
             animation: `crackd-float-${d.float} ${d.dur}s ease-in-out ${d.delay}s infinite`,
           }}
         >
