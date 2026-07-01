@@ -100,5 +100,28 @@ export function onboardingRouter(services: Services, _cfg: AppConfig): Router {
     }
   });
 
+  /**
+   * POST /api/confidential/new  { walletAddress }
+   *
+   * Starts a CONFIDENTIAL vs-AI game: seals a fresh Vault code on-chain as FHE
+   * ciphertext and tops the player up with gas so they can submit guesses.
+   * Returns the on-chain gameId the player cracks against.
+   */
+  r.post("/confidential/new", async (req, res, next) => {
+    try {
+      const { walletAddress } = body.parse(req.body);
+      // Fund gas first (guesses are on-chain), then seal the Vault code.
+      await services.fhe.dripGas(walletAddress);
+      const { gameId } = await services.fhe.sealVaultCode();
+      res.json({ ok: true, gameId });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid wallet address" });
+        return;
+      }
+      next(err);
+    }
+  });
+
   return r;
 }

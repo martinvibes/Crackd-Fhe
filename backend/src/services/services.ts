@@ -6,6 +6,7 @@
 import type { Redis } from "ioredis";
 import { AIService } from "./aiService.js";
 import { ZamaService } from "./zamaService.js";
+import { FheService } from "./fheService.js";
 import { buildAssetRegistry, type AssetRegistry } from "./assets.js";
 import { GameStateStore } from "../store/gameState.js";
 import { createRedis } from "../store/redis.js";
@@ -15,6 +16,7 @@ export interface Services {
   cfg: AppConfig;
   redis: Redis;
   chain: ZamaService;
+  fhe: FheService;
   ai: AIService;
   gameStore: GameStateStore;
   assets: AssetRegistry;
@@ -28,6 +30,7 @@ export function buildServices(cfg: AppConfig): Services {
     redis,
     assets,
     chain: new ZamaService(cfg, assets),
+    fhe: new FheService(cfg),
     ai: new AIService(cfg),
     gameStore: new GameStateStore(redis, cfg),
   };

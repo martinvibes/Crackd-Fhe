@@ -102,6 +102,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ walletAddress }),
     }),
+  confidentialNew: (walletAddress: string) =>
+    j<{ ok: boolean; gameId: string }>(`/api/confidential/new`, {
+      method: "POST",
+      body: JSON.stringify({ walletAddress }),
+    }),
   setAvatar: (wallet: string, imageDataUrl: string) =>
     j<{ ok: boolean }>(`/api/player/${wallet}/avatar`, {
       method: "PUT",

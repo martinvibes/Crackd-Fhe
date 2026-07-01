@@ -4,6 +4,7 @@
  * embossed and tilt in 3D on hover.
  */
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 export type Mode =
   | "vs_ai_free"
@@ -24,14 +25,14 @@ interface ModeCard {
 const MODE_CARDS: ModeCard[] = [
   {
     m: "vs_ai_free",
-    t: "vs AI · free",
-    d: "No wallet, no stake. Warm up.",
+    t: "vs AI · confidential",
+    d: "Crack the Vault's code, sealed on-chain as FHE ciphertext.",
     icon: <IconSoloDial />,
   },
   {
     m: "vs_ai_staked",
-    t: "vs AI · staked",
-    d: "Pay to play. Win up to 2× from the pool.",
+    t: "vs AI · fast (off-chain)",
+    d: "Instant classic mode. Stake WETH/USDC, win from the pool.",
     icon: <IconStakedDial />,
     staked: true,
   },
@@ -51,6 +52,12 @@ const MODE_CARDS: ModeCard[] = [
 ];
 
 export function ModePicker({ onPick }: { onPick: (m: Mode) => void }) {
+  const navigate = useNavigate();
+  const pick = (m: Mode) => {
+    // vs-AI · free is the confidential, on-chain FHE game — route there.
+    if (m === "vs_ai_free") navigate("/confidential");
+    else onPick(m);
+  };
   return (
     <div className="animate-fade-in">
       <div className="text-[11px] uppercase tracking-[0.22em] text-fg-muted">
@@ -67,7 +74,7 @@ export function ModePicker({ onPick }: { onPick: (m: Mode) => void }) {
         {MODE_CARDS.map(({ m, t, d, icon, staked, comingSoon }) => (
           <motion.button
             key={m}
-            onClick={() => !comingSoon && onPick(m)}
+            onClick={() => !comingSoon && pick(m)}
             disabled={comingSoon}
             whileHover={comingSoon ? undefined : { y: -6, rotateX: 5, rotateY: -3 }}
             whileTap={comingSoon ? undefined : { scale: 0.99 }}

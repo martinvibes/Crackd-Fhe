@@ -18,17 +18,11 @@ import { useWalletStore } from "../store/walletStore";
 import { getActiveProvider } from "../lib/wallet";
 import {
   fheConfigured,
-  sealCode,
   scoreGuessOnChain,
   txExplorer,
   FHE_EXPLORER,
 } from "../lib/fheGame";
-import {
-  allCodes,
-  filterCandidates,
-  pickGuess,
-  isValidCode,
-} from "../lib/solver";
+import { isValidCode } from "../lib/solver";
 import WalletButton from "../components/WalletButton";
 import { PlayBackground } from "../components/game/PlayBackground";
 import { Peg } from "../components/game/board/GuessBubble";
@@ -43,7 +37,7 @@ interface Round {
   txHash: string;
 }
 
-type Phase = "set" | "playing" | "done";
+type Phase = "start" | "playing" | "done";
 
 export default function Confidential() {
   const address = useWalletStore((s) => s.address);
@@ -55,55 +49,36 @@ export default function Confidential() {
 }
 
 // ============================================================
-// Main challenge
+// Confidential vs-AI — YOU crack the Vault's on-chain sealed code
 // ============================================================
 
 function Challenge() {
-  const [phase, setPhase] = useState<Phase>("set");
-  const [digits, setDigits] = useState<string[]>(["", "", "", ""]);
+  const address = useWalletStore((s) => s.address);
+  const [phase, setPhase] = useState<Phase>("start");
   const [gameId, setGameId] = useState("");
-  const [sealTx, setSealTx] = useState("");
-  const [candidates, setCandidates] = useState<string[]>([]);
   const [rounds, setRounds] = useState<Round[]>([]);
-  const [vaultGuess, setVaultGuess] = useState("");
-  const [turn, setTurn] = useState(0);
+  const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<"vault_cracked" | "you_win" | null>(null);
+  const [result, setResult] = useState<"cracked" | "failed" | null>(null);
 
   const getSigner = useCallback(async () => {
     const provider = await getActiveProvider();
     return provider.getSigner();
   }, []);
 
-  const seal = useCallback(async () => {
+  const start = useCallback(async () => {
+    if (!address) return;
     setError(null);
-    const code = digits.join("");
-    if (!isValidCode(code)) {
-      setError("Pick 4 different digits (e.g. 5831).");
-      return;
-    }
     setBusy(true);
+    setStatus("Sealing the Vault's code on-chain…");
     try {
-      const signer = await getSigner();
-      setStatus("Checking gas…");
-      try {
-        await api.gas(await signer.getAddress());
-      } catch {
-        /* best-effort top-up; proceed regardless */
-      }
-      setStatus("Encrypting your code with FHE…");
-      setStatus("Sealing on-chain — confirm in your wallet…");
-      const { gameId, txHash } = await sealCode(
-        signer,
-        code.split("").map(Number),
-      );
+      const { gameId } = await api.confidentialNew(address);
       setGameId(gameId);
-      setSealTx(txHash);
-      const cands = allCodes();
-      setCandidates(cands);
-      setVaultGuess(pickGuess(cands, 0));
+      setRounds([]);
+      setResult(null);
+      setDraft("");
       setPhase("playing");
     } catch (e) {
       setError(friendly(e));
@@ -111,126 +86,98 @@ function Challenge() {
       setBusy(false);
       setStatus(null);
     }
-  }, [digits, getSigner]);
+  }, [address]);
 
-  const scoreNext = useCallback(async () => {
+  const crack = useCallback(async () => {
     setError(null);
+    const code = draft.replace(/\D/g, "").slice(0, 4);
+    if (!isValidCode(code)) {
+      setError("Enter 4 different digits (e.g. 5831).");
+      return;
+    }
     setBusy(true);
     try {
       const signer = await getSigner();
       try {
         await api.gas(await signer.getAddress());
       } catch {
-        /* best-effort top-up */
+        /* best-effort gas top-up */
       }
       setStatus("Scoring on the encrypted code — confirm in your wallet…");
-      const res = await scoreGuessOnChain(
-        signer,
-        gameId,
-        vaultGuess.split("").map(Number),
-      );
+      const res = await scoreGuessOnChain(signer, gameId, code.split("").map(Number));
       const round: Round = {
-        guess: vaultGuess,
+        guess: code,
         pots: res.pots,
         pans: res.pans,
         solved: res.solved,
         txHash: res.txHash,
       };
-      const nextRounds = [...rounds, round];
-      setRounds(nextRounds);
+      const next = [...rounds, round];
+      setRounds(next);
+      setDraft("");
 
       if (res.solved || res.pots === 4) {
-        setResult("vault_cracked");
+        setResult("cracked");
         setPhase("done");
-        return;
-      }
-      const nextTurn = turn + 1;
-      if (nextTurn >= MAX_ROUNDS) {
-        setResult("you_win");
+      } else if (next.length >= MAX_ROUNDS) {
+        setResult("failed");
         setPhase("done");
-        return;
       }
-      const remaining = filterCandidates(candidates, vaultGuess, {
-        pots: res.pots,
-        pans: res.pans,
-      });
-      setCandidates(remaining);
-      setVaultGuess(pickGuess(remaining, nextTurn));
-      setTurn(nextTurn);
     } catch (e) {
       setError(friendly(e));
     } finally {
       setBusy(false);
       setStatus(null);
     }
-  }, [gameId, vaultGuess, rounds, candidates, turn, getSigner]);
-
-  const reset = useCallback(() => {
-    setPhase("set");
-    setDigits(["", "", "", ""]);
-    setGameId("");
-    setSealTx("");
-    setCandidates([]);
-    setRounds([]);
-    setVaultGuess("");
-    setTurn(0);
-    setResult(null);
-    setError(null);
-  }, []);
+  }, [draft, gameId, rounds, getSigner]);
 
   return (
     <div className="relative max-w-5xl mx-auto px-5 md:px-8 py-8 md:py-12">
       <PlayBackground intense={phase === "playing"} />
       <div className="relative z-10">
-      <Header />
+        <Header />
 
-      <div className="mt-8 grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-6">
-        {/* Left: the game */}
-        <div className="space-y-5">
-          <GasFaucet />
-          {phase === "set" && (
-            <SetCard
-              digits={digits}
-              setDigits={setDigits}
-              onSeal={seal}
-              busy={busy}
-              status={status}
-            />
-          )}
+        <div className="mt-8 grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-6">
+          {/* Left: the game */}
+          <div className="space-y-5">
+            <GasFaucet />
 
-          {phase !== "set" && (
-            <SealedBanner code={digits.join("")} sealTx={sealTx} gameId={gameId} />
-          )}
+            {phase === "start" && <StartCard onStart={start} busy={busy} status={status} />}
 
-          {phase === "playing" && (
-            <PlayCard
-              vaultGuess={vaultGuess}
-              turn={turn}
-              onScore={scoreNext}
-              busy={busy}
-              status={status}
-            />
-          )}
+            {phase !== "start" && (
+              <VaultBanner gameId={gameId} attempts={rounds.length} />
+            )}
 
-          {phase === "done" && result && (
-            <ResultCard result={result} rounds={rounds.length} onReset={reset} />
-          )}
+            {phase === "playing" && (
+              <CrackCard
+                value={draft}
+                onChange={setDraft}
+                onCrack={crack}
+                attempt={rounds.length + 1}
+                busy={busy}
+                status={status}
+              />
+            )}
 
-          {error && (
-            <div
-              role="alert"
-              className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger"
-            >
-              {error}
-            </div>
-          )}
+            {phase === "done" && result && (
+              <ResultCard result={result} attempts={rounds.length} onReset={start} />
+            )}
 
-          {rounds.length > 0 && <RoundLog rounds={rounds} />}
+            {error && (
+              <div
+                role="alert"
+                className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger"
+              >
+                {error}
+              </div>
+            )}
+
+            {rounds.length > 0 && <RoundLog rounds={rounds} />}
+          </div>
+
+          {/* Right: the why */}
+          <Explainer />
         </div>
-
-        {/* Right: the why */}
-        <Explainer />
-      </div>
       </div>
     </div>
   );
@@ -290,133 +237,86 @@ function Header() {
         <LockIcon /> Confidential · Zama fhEVM
       </div>
       <h1 className="mt-2 text-3xl md:text-4xl font-semibold tracking-[-0.02em]">
-        Your code, sealed on-chain.
+        Crack the Vault's sealed code.
       </h1>
       <p className="mt-2 text-fg-secondary max-w-2xl">
-        Seal a secret code as ciphertext, then watch The Vault try to crack it —
-        every guess scored <span className="text-fg-primary">by the contract,
-        on the encrypted code</span>. Your digits never touch the chain in the
-        clear. Not even we can see them.
+        The Vault's secret code lives on-chain as <span className="text-fg-primary">FHE
+        ciphertext</span>. You guess; the contract scores each guess{" "}
+        <span className="text-fg-primary">on the encrypted code</span> and the
+        pegs decrypt only for you. The code is never revealed — not to the chain,
+        not even to us.
       </p>
     </div>
   );
 }
 
-function SetCard({
-  digits,
-  setDigits,
-  onSeal,
+function StartCard({
+  onStart,
   busy,
   status,
 }: {
-  digits: string[];
-  setDigits: (v: string[]) => void;
-  onSeal: () => void;
+  onStart: () => void;
   busy: boolean;
   status: string | null;
 }) {
-  const slots = [0, 1, 2, 3];
-  function setAt(i: number, v: string) {
-    const d = v.replace(/\D/g, "").slice(-1);
-    const next = [...digits];
-    next[i] = d;
-    setDigits(next);
-  }
-  function randomize() {
-    const pool = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-    for (let i = pool.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [pool[i], pool[j]] = [pool[j]!, pool[i]!];
-    }
-    setDigits(pool.slice(0, 4).map(String));
-  }
-
   return (
     <div className="panel-elevated p-6">
       <div className="text-[11px] uppercase tracking-[0.2em] text-fg-muted">
         Step 1
       </div>
-      <h2 className="mt-1 text-xl font-semibold">Set your secret code</h2>
+      <h2 className="mt-1 text-xl font-semibold">Start a confidential game</h2>
       <p className="mt-1 text-sm text-fg-muted">
-        Four different digits. This is what gets encrypted.
+        The Vault generates a secret 4-digit code and seals it on-chain as
+        ciphertext. Then you try to crack it — you have {MAX_ROUNDS} guesses.
       </p>
-
-      <div className="mt-5 flex items-center gap-3">
-        {slots.map((i) => (
-          <input
-            key={i}
-            inputMode="numeric"
-            maxLength={1}
-            value={digits[i] ?? ""}
-            onChange={(e) => setAt(i, e.target.value)}
-            className="w-14 h-16 text-center text-2xl font-semibold tabular-nums rounded-xl text-fg-primary outline-none transition-shadow focus:shadow-[0_0_0_3px_rgba(255,0,168,0.3)]"
-            style={{
-              background: "linear-gradient(160deg,#1E1329,#0D0816)",
-              border: "1px solid rgba(255,0,168,0.18)",
-              boxShadow:
-                "inset 0 1px 0 rgba(255,255,255,0.07), inset 0 -3px 6px rgba(0,0,0,0.55)",
-            }}
-          />
+      <div className="mt-5 flex items-center gap-2">
+        {["·", "·", "·", "·"].map((c, i) => (
+          <DigitTile key={i} char={c} />
         ))}
-        <button
-          onClick={randomize}
-          className="ml-2 text-xs text-fg-muted hover:text-fg-secondary cursor-pointer underline underline-offset-4"
-        >
-          randomize
-        </button>
+        <span className="ml-2 text-xs text-fg-muted inline-flex items-center gap-1">
+          <LockIcon /> sealed on-chain
+        </span>
       </div>
-
       <button
-        onClick={onSeal}
+        onClick={onStart}
         disabled={busy}
-        className="btn-primary mt-6 w-full cursor-pointer disabled:cursor-wait inline-flex items-center justify-center gap-2"
+        className="btn-primary mt-6 w-full cursor-pointer disabled:cursor-wait"
       >
-        {busy ? (
-          status ?? "Sealing…"
-        ) : (
-          <>
-            <LockIcon /> Seal on-chain
-          </>
-        )}
+        {busy ? status ?? "Sealing the Vault…" : "Seal the Vault & start"}
       </button>
     </div>
   );
 }
 
-function SealedBanner({
-  code,
-  sealTx,
-  gameId,
-}: {
-  code: string;
-  sealTx: string;
-  gameId: string;
-}) {
+function VaultBanner({ gameId, attempts }: { gameId: string; attempts: number }) {
   return (
     <div className="rounded-2xl border border-accent/30 bg-accent/5 p-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-accent/90">
           <LockIcon />
-          Your code
+          The Vault's code
           <span className="text-fg-muted normal-case tracking-normal">
-            (only you see this)
+            (sealed — nobody can read it)
           </span>
         </div>
-        {sealTx && (
+        {FHE_EXPLORER && (
           <a
-            href={txExplorer(sealTx)}
+            href={FHE_EXPLORER}
             target="_blank"
             rel="noreferrer"
-            className="text-xs text-accent hover:underline whitespace-nowrap inline-flex items-center gap-1"
+            className="text-xs text-accent hover:underline whitespace-nowrap"
           >
-            sealed on-chain ↗
+            on-chain ↗
           </a>
         )}
       </div>
       <div className="mt-3 flex items-center gap-2">
-        {code.split("").map((c, i) => (
+        {["?", "?", "?", "?"].map((c, i) => (
           <DigitTile key={i} char={c} size="sm" />
         ))}
+        <span className="ml-2 text-xs text-fg-muted">
+          {attempts}/{MAX_ROUNDS} guesses used
+        </span>
       </div>
       {gameId && (
         <div className="mt-2 text-[11px] text-fg-muted font-mono truncate">
@@ -427,50 +327,75 @@ function SealedBanner({
   );
 }
 
-function PlayCard({
-  vaultGuess,
-  turn,
-  onScore,
+function CrackCard({
+  value,
+  onChange,
+  onCrack,
+  attempt,
   busy,
   status,
 }: {
-  vaultGuess: string;
-  turn: number;
-  onScore: () => void;
+  value: string;
+  onChange: (v: string) => void;
+  onCrack: () => void;
+  attempt: number;
   busy: boolean;
   status: string | null;
 }) {
+  const slots = [0, 1, 2, 3];
+  function setAt(i: number, ch: string) {
+    const d = ch.replace(/\D/g, "").slice(-1);
+    const arr = value.padEnd(4, " ").slice(0, 4).split("");
+    arr[i] = d || " ";
+    onChange(arr.join("").replace(/ /g, ""));
+  }
   return (
     <div className="panel-elevated p-6">
       <div className="flex items-center justify-between">
         <div>
           <div className="text-[11px] uppercase tracking-[0.2em] text-fg-muted">
-            Step 2 · The Vault is cracking
+            Step 2 · Your move
           </div>
           <h2 className="mt-1 text-xl font-semibold">
-            Guess {turn + 1} of {MAX_ROUNDS}
+            Guess {attempt} of {MAX_ROUNDS}
           </h2>
-        </div>
-        <div className="flex items-center gap-2">
-          {vaultGuess.split("").map((d, i) => (
-            <DigitTile key={i} char={d} />
-          ))}
         </div>
       </div>
 
+      <div className="mt-5 flex items-center gap-3">
+        {slots.map((i) => (
+          <input
+            key={i}
+            inputMode="numeric"
+            maxLength={1}
+            value={value[i] ?? ""}
+            onChange={(e) => setAt(i, e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !busy) onCrack();
+            }}
+            className="w-14 h-16 text-center text-2xl font-semibold tabular-nums rounded-xl text-fg-primary outline-none transition-shadow focus:shadow-[0_0_0_3px_rgba(255,0,168,0.3)]"
+            style={{
+              background: "linear-gradient(160deg,#1E1329,#0D0816)",
+              border: "1px solid rgba(255,0,168,0.18)",
+              boxShadow:
+                "inset 0 1px 0 rgba(255,255,255,0.07), inset 0 -3px 6px rgba(0,0,0,0.55)",
+            }}
+          />
+        ))}
+      </div>
+
       <p className="mt-4 text-sm text-fg-muted">
-        The Vault proposes this guess. Scoring runs{" "}
-        <span className="text-accent">inside the contract, on your encrypted
-        code</span> — the result comes back encrypted and is decrypted just for
+        Scored <span className="text-accent">inside the contract, on the
+        encrypted code</span> — the pegs come back encrypted and decrypt only for
         you.
       </p>
 
       <button
-        onClick={onScore}
+        onClick={onCrack}
         disabled={busy}
         className="btn-primary mt-5 w-full cursor-pointer disabled:cursor-wait"
       >
-        {busy ? status ?? "Scoring on ciphertext…" : "Score this guess on-chain"}
+        {busy ? status ?? "Scoring on ciphertext…" : "Submit guess on-chain"}
       </button>
     </div>
   );
@@ -522,14 +447,14 @@ function RoundLog({ rounds }: { rounds: Round[] }) {
 
 function ResultCard({
   result,
-  rounds,
+  attempts,
   onReset,
 }: {
-  result: "vault_cracked" | "you_win";
-  rounds: number;
+  result: "cracked" | "failed";
+  attempts: number;
   onReset: () => void;
 }) {
-  const win = result === "you_win";
+  const win = result === "cracked";
   return (
     <div
       className={`panel-elevated p-6 ${win ? "border-accent/40" : "border-ink-border"}`}
@@ -537,22 +462,22 @@ function ResultCard({
       <div className="text-3xl font-semibold inline-flex items-center gap-2.5">
         {win ? (
           <>
-            <ShieldIcon /> Your code held.
+            <UnlockIcon /> You cracked the Vault.
           </>
         ) : (
           <>
-            The Vault cracked it. <UnlockIcon />
+            <ShieldIcon /> The Vault held.
           </>
         )}
       </div>
       <p className="mt-2 text-fg-secondary">
         {win
-          ? `The Vault used all ${rounds} guesses and never saw your digits — because nobody could.`
-          : `Cracked in ${rounds} guesses — scored entirely on the encrypted code. Your digits were never exposed on-chain.`}
+          ? `Cracked in ${attempts} guess${attempts === 1 ? "" : "es"} — every one scored on the encrypted code. The Vault's digits were never revealed on-chain.`
+          : `Out of guesses. The Vault's code stayed sealed the whole time — the contract scored you without ever exposing it.`}
       </p>
       <div className="mt-5 flex gap-3">
         <button onClick={onReset} className="btn-primary cursor-pointer">
-          Play again
+          New game
         </button>
         <Link to="/play" className="btn-ghost cursor-pointer">
           Classic modes
