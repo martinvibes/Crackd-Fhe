@@ -110,8 +110,10 @@ export async function decryptFeedback(
   const userAddress = await signer.getAddress();
 
   const { publicKey, privateKey } = fhe.generateKeypair();
-  const startTimestamp = Math.floor(Date.now() / 1000).toString();
-  const durationDays = "7";
+  // The relayer SDK expects these as NUMBERS, not strings — passing strings
+  // throws "InvalidTypeError … UintNumber string".
+  const startTimestamp = Math.floor(Date.now() / 1000);
+  const durationDays = 7;
   const contractAddresses = [contractAddr];
 
   const eip712 = fhe.createEIP712(

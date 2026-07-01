@@ -87,6 +87,12 @@ function Challenge() {
     setBusy(true);
     try {
       const signer = await getSigner();
+      setStatus("Checking gas…");
+      try {
+        await api.gas(await signer.getAddress());
+      } catch {
+        /* best-effort top-up; proceed regardless */
+      }
       setStatus("Encrypting your code with FHE…");
       setStatus("Sealing on-chain — confirm in your wallet…");
       const { gameId, txHash } = await sealCode(
@@ -112,6 +118,11 @@ function Challenge() {
     setBusy(true);
     try {
       const signer = await getSigner();
+      try {
+        await api.gas(await signer.getAddress());
+      } catch {
+        /* best-effort top-up */
+      }
       setStatus("Scoring on the encrypted code — confirm in your wallet…");
       const res = await scoreGuessOnChain(
         signer,
@@ -737,7 +748,8 @@ function friendly(e: unknown): string {
   const code = (e as { code?: number | string })?.code;
   if (code === 4001 || code === "ACTION_REJECTED") return "Transaction rejected in your wallet.";
   const msg = (e as { shortMessage?: string; message?: string })?.shortMessage ?? (e as { message?: string })?.message;
-  if (msg && /insufficient funds/i.test(msg)) return "Not enough Sepolia ETH for gas. Grab some from a faucet.";
+  if (msg && /insufficient funds|coalesce/i.test(msg))
+    return "Out of gas. Tap “Get test ETH” above, then try again.";
   if (msg && msg.length < 160) return msg;
   return "Something went wrong. Check your wallet & network and try again.";
 }
