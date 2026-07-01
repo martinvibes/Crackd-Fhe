@@ -28,6 +28,8 @@ import {
   isValidCode,
 } from "../lib/solver";
 import WalletButton from "../components/WalletButton";
+import { PlayBackground } from "../components/game/PlayBackground";
+import { Peg } from "../components/game/board/GuessBubble";
 
 const MAX_ROUNDS = 10;
 
@@ -164,7 +166,9 @@ function Challenge() {
   }, []);
 
   return (
-    <div className="max-w-5xl mx-auto px-5 md:px-8 py-8 md:py-12">
+    <div className="relative max-w-5xl mx-auto px-5 md:px-8 py-8 md:py-12">
+      <PlayBackground intense={phase === "playing"} />
+      <div className="relative z-10">
       <Header />
 
       <div className="mt-8 grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-6">
@@ -212,6 +216,7 @@ function Challenge() {
 
         {/* Right: the why */}
         <Explainer />
+      </div>
       </div>
     </div>
   );
@@ -287,7 +292,13 @@ function SetCard({
             maxLength={1}
             value={digits[i] ?? ""}
             onChange={(e) => setAt(i, e.target.value)}
-            className="w-14 h-16 text-center text-2xl font-semibold tabular-nums rounded-xl bg-ink-elevated border border-ink-border focus:border-accent/60 outline-none transition-colors"
+            className="w-14 h-16 text-center text-2xl font-semibold tabular-nums rounded-xl text-fg-primary outline-none transition-shadow focus:shadow-[0_0_0_3px_rgba(255,0,168,0.3)]"
+            style={{
+              background: "linear-gradient(160deg,#1E1329,#0D0816)",
+              border: "1px solid rgba(255,0,168,0.18)",
+              boxShadow:
+                "inset 0 1px 0 rgba(255,255,255,0.07), inset 0 -3px 6px rgba(0,0,0,0.55)",
+            }}
           />
         ))}
         <button
@@ -325,30 +336,36 @@ function SealedBanner({
   gameId: string;
 }) {
   return (
-    <div className="rounded-xl border border-accent/30 bg-accent/5 p-4">
+    <div className="rounded-2xl border border-accent/30 bg-accent/5 p-4">
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-sm">
+        <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-accent/90">
           <LockIcon />
-          <span className="text-fg-secondary">Your code</span>
-          <span className="font-mono font-semibold tracking-[0.3em] text-fg-primary">
-            {code}
+          Your code
+          <span className="text-fg-muted normal-case tracking-normal">
+            (only you see this)
           </span>
-          <span className="text-xs text-fg-muted">(only you see this)</span>
         </div>
         {sealTx && (
           <a
             href={txExplorer(sealTx)}
             target="_blank"
             rel="noreferrer"
-            className="text-xs text-accent hover:underline whitespace-nowrap"
+            className="text-xs text-accent hover:underline whitespace-nowrap inline-flex items-center gap-1"
           >
             sealed on-chain ↗
           </a>
         )}
       </div>
-      <div className="mt-2 text-[11px] text-fg-muted font-mono truncate">
-        game {gameId}
+      <div className="mt-3 flex items-center gap-2">
+        {code.split("").map((c, i) => (
+          <DigitTile key={i} char={c} size="sm" />
+        ))}
       </div>
+      {gameId && (
+        <div className="mt-2 text-[11px] text-fg-muted font-mono truncate">
+          game {gameId.slice(0, 10)}…{gameId.slice(-6)}
+        </div>
+      )}
     </div>
   );
 }
@@ -379,12 +396,7 @@ function PlayCard({
         </div>
         <div className="flex items-center gap-2">
           {vaultGuess.split("").map((d, i) => (
-            <span
-              key={i}
-              className="w-11 h-12 grid place-items-center text-xl font-semibold tabular-nums rounded-lg bg-ink-raised border border-ink-border"
-            >
-              {d}
-            </span>
+            <DigitTile key={i} char={d} />
           ))}
         </div>
       </div>
@@ -417,22 +429,16 @@ function RoundLog({ rounds }: { rounds: Round[] }) {
         {rounds.map((r, i) => (
           <div
             key={i}
-            className="flex items-center gap-3 rounded-lg bg-ink-elevated border border-ink-border px-3 py-2"
+            className="flex items-center gap-3 rounded-xl bg-ink-elevated border border-ink-border px-3 py-2"
           >
             <span className="text-xs text-fg-muted w-6">#{i + 1}</span>
-            <span className="font-mono font-semibold tracking-[0.25em] text-fg-primary">
-              {r.guess}
+            <span className="flex items-center gap-1">
+              {r.guess.split("").map((c, k) => (
+                <DigitTile key={k} char={c} size="sm" />
+              ))}
             </span>
-            <span className="flex items-center gap-1 ml-1">
-              {Array.from({ length: r.pots }).map((_, k) => (
-                <Peg key={`pot${k}`} kind="pot" />
-              ))}
-              {Array.from({ length: r.pans }).map((_, k) => (
-                <Peg key={`pan${k}`} kind="pan" />
-              ))}
-              {r.pots + r.pans === 0 && (
-                <span className="text-xs text-fg-muted">no match</span>
-              )}
+            <span className="ml-1">
+              <PegRow pots={r.pots} pans={r.pans} />
             </span>
             <span className="ml-auto flex items-center gap-2">
               {r.solved && (
@@ -605,14 +611,42 @@ function Centered({ children }: { children: React.ReactNode }) {
 // Bits
 // ============================================================
 
-function Peg({ kind }: { kind: "pot" | "pan" }) {
+/** Embossed 3D digit tile — matches the game board's tiles. */
+function DigitTile({
+  char,
+  size = "md",
+}: {
+  char: string;
+  size?: "sm" | "md";
+}) {
+  const dims = size === "sm" ? "w-8 h-10 text-base" : "w-12 h-14 text-2xl";
   return (
     <span
-      className={`inline-block h-3 w-3 rounded-full ${
-        kind === "pot" ? "bg-accent" : "border border-accent/70"
-      }`}
-      title={kind === "pot" ? "POT — right digit, right place" : "PAN — right digit, wrong place"}
-    />
+      className={`${dims} grid place-items-center rounded-xl font-mono font-semibold tabular-nums text-fg-primary shrink-0`}
+      style={{
+        background: "linear-gradient(160deg,#1E1329,#0D0816)",
+        border: "1px solid rgba(255,0,168,0.16)",
+        boxShadow:
+          "inset 0 1px 0 rgba(255,255,255,0.07), inset 0 -3px 6px rgba(0,0,0,0.55), 0 2px 6px rgba(0,0,0,0.4)",
+      }}
+    >
+      {char}
+    </span>
+  );
+}
+
+/** Four feedback pegs (pots, then pans, then misses) using the board's peg. */
+function PegRow({ pots, pans }: { pots: number; pans: number }) {
+  const pegs: ("pot" | "pan" | "miss")[] = [];
+  for (let i = 0; i < pots; i++) pegs.push("pot");
+  for (let i = 0; i < pans; i++) pegs.push("pan");
+  while (pegs.length < 4) pegs.push("miss");
+  return (
+    <div className="flex items-center gap-1.5" aria-label={`${pots} POT, ${pans} PAN`}>
+      {pegs.map((k, i) => (
+        <Peg key={i} kind={k} delay={0.1 + i * 0.07} />
+      ))}
+    </div>
   );
 }
 

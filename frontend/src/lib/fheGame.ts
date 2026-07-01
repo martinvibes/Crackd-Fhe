@@ -30,7 +30,7 @@ const ABI = [
   "function submitGuess(bytes32 gameId, uint8[4] guess)",
   "function getFeedback(bytes32 gameId, address guesser) view returns (bytes32 black, bytes32 white, bytes32 solved, uint32 guessIndex)",
   "function closeGame(bytes32 gameId)",
-  "event GameCreated(bytes32 gameId, address setter)",
+  "event GameCreated(bytes32 indexed gameId, address indexed setter)",
 ];
 
 /**
@@ -60,6 +60,9 @@ export async function sealCode(
     } catch {
       /* not our event */
     }
+  }
+  if (!gameId) {
+    throw new Error("Couldn't read the sealed game id from the transaction.");
   }
   return { gameId, txHash: tx.hash };
 }
