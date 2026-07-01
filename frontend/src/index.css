@@ -24,13 +24,19 @@
   body,
   #root {
     height: 100%;
-    background: #040008;
     color: #ede6f0;
     font-family: "Inter", system-ui, sans-serif;
     font-feature-settings: "ss01", "cv11";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+  }
+
+  /* Base dark on html/body only — #root stays transparent so fixed
+     background layers (e.g. the /play cipher field) show through. */
+  html,
+  body {
+    background: #040008;
   }
 
   body {

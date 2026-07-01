@@ -124,25 +124,25 @@ export function PlayBackground({ intense = false }: { intense?: boolean }) {
         @keyframes crackd-drift-a { 0%,100% { transform: translate(0,0); } 50% { transform: translate(60px,40px); } }
         @keyframes crackd-drift-b { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-52px,-30px); } }
         @keyframes crackd-twinkle {
-          0%,100% { opacity: 0.12; transform: translateY(0); }
-          50% { opacity: 0.9; transform: translateY(-3px); }
+          0%,100% { opacity: 0.25; transform: translateY(0); }
+          50% { opacity: 1; transform: translateY(-3px); }
         }
         @keyframes crackd-float-a {
-          0%,100% { transform: translate(0,0); opacity: 0.06; }
-          50% { transform: translate(12px,-18px); opacity: 0.26; }
+          0%,100% { transform: translate(0,0); opacity: 0.18; }
+          50% { transform: translate(14px,-20px); opacity: 0.5; }
         }
         @keyframes crackd-float-b {
-          0%,100% { transform: translate(0,0); opacity: 0.05; }
-          50% { transform: translate(-16px,14px); opacity: 0.22; }
+          0%,100% { transform: translate(0,0); opacity: 0.15; }
+          50% { transform: translate(-18px,16px); opacity: 0.42; }
         }
         @keyframes crackd-float-c {
-          0%,100% { transform: translate(0,0); opacity: 0.07; }
-          33% { transform: translate(14px,12px); opacity: 0.24; }
-          66% { transform: translate(-12px,-14px); opacity: 0.16; }
+          0%,100% { transform: translate(0,0); opacity: 0.2; }
+          33% { transform: translate(16px,14px); opacity: 0.46; }
+          66% { transform: translate(-14px,-16px); opacity: 0.32; }
         }
         @keyframes crackd-float-d {
-          0%,100% { transform: translate(0,0) rotate(0deg); opacity: 0.05; }
-          50% { transform: translate(-10px,-12px) rotate(8deg); opacity: 0.2; }
+          0%,100% { transform: translate(0,0) rotate(0deg); opacity: 0.16; }
+          50% { transform: translate(-12px,-14px) rotate(8deg); opacity: 0.4; }
         }
         @media (prefers-reduced-motion: reduce) {
           [style*="crackd-"] { animation: none !important; }
