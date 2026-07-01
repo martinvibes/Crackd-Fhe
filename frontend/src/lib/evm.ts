@@ -40,7 +40,7 @@ const DUEL_ABI = [
   "function createGame(address token, uint256 stake) returns (bytes32)",
   "function joinGame(bytes32 gameId)",
   "function cancelGame(bytes32 gameId)",
-  "event GameCreated(bytes32 gameId, address playerOne, address token, uint256 stake)",
+  "event GameCreated(bytes32 indexed gameId, address indexed playerOne, address indexed token, uint256 stake)",
 ];
 
 const VAULT_ABI = [
@@ -116,6 +116,11 @@ export async function duelCreateGame(
     } catch {
       /* not our event */
     }
+  }
+  if (!gameId) {
+    throw new Error(
+      "Couldn't read the on-chain game id from the create transaction.",
+    );
   }
   return { gameId, txHash: tx.hash };
 }
