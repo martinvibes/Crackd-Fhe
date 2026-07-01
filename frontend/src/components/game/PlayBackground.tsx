@@ -16,7 +16,7 @@ const FLOATS = ["a", "b", "c", "d"] as const;
 export function PlayBackground({ intense = false }: { intense?: boolean }) {
   const stars = useMemo(
     () =>
-      Array.from({ length: 54 }, (_, i) => ({
+      Array.from({ length: 90 }, (_, i) => ({
         id: i,
         left: Math.random() * 100,
         top: Math.random() * 100,
@@ -32,7 +32,7 @@ export function PlayBackground({ intense = false }: { intense?: boolean }) {
   // float paths so the motion looks organic rather than uniform.
   const digits = useMemo(
     () =>
-      Array.from({ length: 30 }, (_, i) => ({
+      Array.from({ length: 70 }, (_, i) => ({
         id: i,
         char: String(Math.floor(Math.random() * 10)),
         left: Math.random() * 100,
@@ -47,7 +47,7 @@ export function PlayBackground({ intense = false }: { intense?: boolean }) {
   );
 
   return (
-    <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden>
+    <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden>
       {/* blueprint grid */}
       <div
         className="absolute inset-0"

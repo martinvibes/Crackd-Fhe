@@ -292,6 +292,7 @@ export default function Game() {
       }`}
     >
       <PlayBackground intense={stage === "active"} />
+      <div className="relative z-10">
       {err && <ErrorBar message={err} onClose={() => setErr(null)} />}
 
       {stage === "mode_pick" && (
@@ -378,6 +379,7 @@ export default function Game() {
       {/* Always-on floating help — newcomers can open the worked
           example from any stage of /play without cluttering any panel. */}
       <HelpDock />
+      </div>
     </div>
   );
 }
