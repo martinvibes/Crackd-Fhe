@@ -39,14 +39,16 @@ export function Composer({
     useRef<HTMLInputElement>(null),
   ];
 
-  // Autofocus the first empty slot when the board becomes interactive.
+  // Keep focus on the first empty slot — on mount, when the board becomes
+  // interactive, as you type (auto-advance), and after a submit clears the
+  // value (so the next guess starts at slot 1, not the last slot). Digits are
+  // filled left-to-right so value.length is the first empty index.
   useEffect(() => {
     if (disabled) return;
-    const firstEmpty = refs.findIndex((r) => !(r.current?.value ?? ""));
-    const idx = firstEmpty === -1 ? 0 : firstEmpty;
-    refs[idx]?.current?.focus();
+    if (value.length >= 4) return; // all filled — don't yank focus while editing
+    refs[value.length]?.current?.focus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [disabled]);
+  }, [disabled, value]);
 
   function setDigitAt(idx: number, ch: string) {
     const chars = value.padEnd(4, " ").split("");
@@ -63,7 +65,8 @@ export function Composer({
     }
     setDigitAt(idx, digit);
     sounds.digitTap();
-    if (idx < 3) refs[idx + 1]?.current?.focus();
+    // Auto-advance is handled by the focus effect above (keyed on value),
+    // which reliably survives the controlled re-render + post-submit clear.
   }
 
   function handleKeyDown(idx: number, e: React.KeyboardEvent<HTMLInputElement>) {
