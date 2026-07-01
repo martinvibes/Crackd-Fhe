@@ -68,17 +68,32 @@ export function onboardingRouter(services: Services, _cfg: AppConfig): Router {
         walletAddress,
         asset as AssetSymbol,
       );
-      // Gas drip once per address.
-      let gasTx: string | null = null;
-      const already = await services.gameStore.wasFunded(walletAddress);
-      if (!already) {
-        gasTx = await services.chain.dripGas(walletAddress);
-        await services.gameStore.markFunded(walletAddress);
-      }
+      // Top up gas to target (no-ops if already funded enough).
+      const gasTx = await services.chain.dripGas(walletAddress);
       res.json({ ok: true, asset, amount: amountHuman, tokenTx: txHash, gasTx });
     } catch (err) {
       if (err instanceof z.ZodError) {
         res.status(400).json({ error: "Invalid request" });
+        return;
+      }
+      next(err);
+    }
+  });
+
+  /**
+   * POST /api/gas  { walletAddress }
+   *
+   * Gas-only top-up (no token mint) — used by Confidential mode, where players
+   * just need Sepolia ETH to seal + score on-chain.
+   */
+  r.post("/gas", async (req, res, next) => {
+    try {
+      const { walletAddress } = body.parse(req.body);
+      const gasTx = await services.chain.dripGas(walletAddress);
+      res.json({ ok: true, gasTx });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid wallet address" });
         return;
       }
       next(err);

@@ -11,7 +11,9 @@
  * leakage.
  */
 import { useState, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
+import { api } from "../lib/api";
 import { useWalletStore } from "../store/walletStore";
 import { getActiveProvider } from "../lib/wallet";
 import {
@@ -174,6 +176,7 @@ function Challenge() {
       <div className="mt-8 grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-6">
         {/* Left: the game */}
         <div className="space-y-5">
+          <GasFaucet />
           {phase === "set" && (
             <SetCard
               digits={digits}
@@ -225,6 +228,49 @@ function Challenge() {
 // ============================================================
 // Pieces
 // ============================================================
+
+/** Gas-only faucet — Confidential runs on-chain, so players need Sepolia ETH. */
+function GasFaucet() {
+  const address = useWalletStore((s) => s.address);
+  const qc = useQueryClient();
+  const [state, setState] = useState<"idle" | "sending" | "done">("idle");
+  const [err, setErr] = useState<string | null>(null);
+
+  async function go() {
+    if (!address || state === "sending") return;
+    setErr(null);
+    setState("sending");
+    try {
+      await api.gas(address);
+      qc.invalidateQueries({ queryKey: ["balances", address] });
+      setState("done");
+      setTimeout(() => setState("idle"), 4000);
+    } catch (e) {
+      setErr((e as Error).message?.slice(0, 120) ?? "Couldn't top up gas");
+      setState("idle");
+    }
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-3 rounded-xl border border-ink-border bg-ink-elevated px-3 py-2">
+        <span className="text-xs text-fg-muted">
+          {state === "done"
+            ? "Gas topped up — you're set."
+            : "Sealing & scoring run on-chain. Need gas?"}
+        </span>
+        <button
+          onClick={go}
+          disabled={state === "sending" || !address}
+          className="text-xs font-medium text-accent hover:underline disabled:opacity-60 cursor-pointer whitespace-nowrap"
+        >
+          {state === "sending" ? "Sending…" : "Get test ETH"}
+        </button>
+      </div>
+      {err && <div className="mt-1 text-[11px] text-danger">{err}</div>}
+    </div>
+  );
+}
 
 function Header() {
   return (

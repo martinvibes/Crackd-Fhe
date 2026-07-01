@@ -182,13 +182,19 @@ export class ZamaService {
     return { txHash: tx.hash, amountHuman };
   }
 
-  /** Drip a little Sepolia ETH for gas if the player is low. Returns hash or null. */
+  /**
+   * Top a player's Sepolia ETH up to a target so they can afford a full game
+   * (confidential seal + up to 10 on-chain FHE scoring txs are gas-heavy).
+   * No-ops when they're already above MIN. Returns tx hash or null.
+   */
   async dripGas(address: string): Promise<string | null> {
+    const MIN = ethers.parseEther("0.02");
+    const TARGET = ethers.parseEther("0.04");
     const bal = await this.provider.getBalance(address);
-    if (bal >= ethers.parseEther("0.003")) return null;
+    if (bal >= MIN) return null;
     const tx = await this.admin.sendTransaction({
       to: address,
-      value: ethers.parseEther("0.006"),
+      value: TARGET - bal,
     });
     await tx.wait();
     logger.info({ address }, "faucet.gasDrip ok");
