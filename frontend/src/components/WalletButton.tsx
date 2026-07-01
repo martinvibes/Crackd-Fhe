@@ -11,6 +11,7 @@ import { useWalletStore } from "../store/walletStore";
 import { shortAddress } from "../lib/evm";
 import { useBalances } from "../lib/balance";
 import { ConnectModal } from "./ConnectModal";
+import { TokenLogo } from "./TokenLogo";
 import type { WalletKind } from "../lib/walletProvider";
 
 const EXPLORER_BASE = "https://sepolia.etherscan.io/address";
@@ -408,37 +409,6 @@ function PowerIcon() {
         strokeLinecap="round"
       />
     </svg>
-  );
-}
-
-const TOKEN_LOGOS: Record<string, string> = {
-  ETH: "/tokens/eth.png",
-  WETH: "/tokens/weth.png",
-  USDC: "/tokens/usdc.png",
-};
-
-function TokenLogo({ symbol, size = 24 }: { symbol: string; size?: number }) {
-  const src = TOKEN_LOGOS[symbol.toUpperCase()];
-  const [failed, setFailed] = useState(false);
-  if (src && !failed) {
-    return (
-      <img
-        src={src}
-        alt={symbol}
-        width={size}
-        height={size}
-        className="rounded-full shrink-0"
-        onError={() => setFailed(true)}
-      />
-    );
-  }
-  return (
-    <span
-      className="grid place-items-center rounded-full bg-ink-raised text-[10px] font-semibold text-fg-secondary shrink-0"
-      style={{ width: size, height: size }}
-    >
-      {symbol.slice(0, 1)}
-    </span>
   );
 }
 

@@ -82,7 +82,8 @@ export interface SafeGameView {
   currentTurn: PlayerSlot;
   winner: string | null;
   isDraw: boolean;
-  stakeAmount: string;       // token base units (bigint as string)
+  stakeAmount: number;       // human amount (converted from base units)
+  stakeAsset: string | null; // "WETH" | "USDC" | null (free/casual)
   maxGuesses: number;
   createdAt: number;
   updatedAt: number;

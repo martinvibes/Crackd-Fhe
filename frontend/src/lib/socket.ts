@@ -46,6 +46,7 @@ export interface SafeGameView {
   winner: string | null;
   isDraw: boolean;
   stakeAmount: number;
+  stakeAsset: string | null;
   maxGuesses: number;
   createdAt: number;
   updatedAt: number;

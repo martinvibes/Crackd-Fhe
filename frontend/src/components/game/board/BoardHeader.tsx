@@ -2,8 +2,8 @@
  * Hero header above the guess timeline. Three layers:
  *   1. TurnBadge — a live, colour-coded pill at the top.
  *   2. Huge statement — the current "act" (setting code / your turn / their turn).
- *   3. Player strip — two tiles with codes + guess counts.
- *   4. Optional Pidgin taunt strip when The Vault has something to say.
+ *   3. Player strip — two tiles with codes + guess counts. The Vault's taunt
+ *      surfaces as a speech bubble tethered to its tile (see PlayerTile).
  */
 import type { SafeGameView } from "../../../lib/socket";
 import { PlayerTile } from "./PlayerTile";
@@ -79,23 +79,11 @@ export function BoardHeader({
           active={!yours && view.status === "active"}
           guessCount={view.opponentGuesses.length}
           rtl
+          isVault={isAi}
+          thinking={isAi && !yours && view.status === "active"}
+          taunt={isAi ? tauntLine : null}
         />
       </div>
-
-      {tauntLine && (
-        <div
-          className="mt-4 px-4 py-3 rounded-xl text-sm leading-snug border animate-slide-up"
-          style={{
-            background: "rgba(255, 0, 168, 0.05)",
-            borderColor: "rgba(255, 0, 168, 0.18)",
-          }}
-        >
-          <span className="text-[10px] uppercase tracking-[0.25em] text-accent/80 mr-2">
-            The Vault
-          </span>
-          <span className="text-fg-primary">{tauntLine}</span>
-        </div>
-      )}
     </div>
   );
 }

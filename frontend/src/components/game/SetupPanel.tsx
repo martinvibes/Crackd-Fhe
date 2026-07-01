@@ -12,6 +12,7 @@ import { modeLabel, type Mode } from "./ModePicker";
 import { api } from "../../lib/api";
 import { useWalletStore } from "../../store/walletStore";
 import { useQueryClient } from "@tanstack/react-query";
+import { TokenLogo } from "../TokenLogo";
 
 const STAKE_PRESETS = [1, 5, 10, 25] as const;
 
@@ -145,7 +146,7 @@ export function SetupPanel({
   joinPreview: JoinPreview | null;
   previewLoading: boolean;
 }) {
-  const [asset, setAsset] = useState("WETH");
+  const [asset, setAsset] = useState("USDC");
   const [stake, setStake] = useState(1);
 
   const canJoin = mode === "pvp_casual" || mode === "pvp_staked";
@@ -307,12 +308,13 @@ function VaultLockCard({
           <button
             key={a.symbol}
             onClick={() => setAsset(a.symbol)}
-            className={`px-3.5 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors inline-flex items-center gap-1.5 ${
               asset === a.symbol
                 ? "bg-accent text-ink border-accent"
                 : "bg-ink-elevated border-ink-border text-fg-secondary hover:text-fg-primary"
             }`}
           >
+            <TokenLogo symbol={a.symbol} size={16} />
             {a.symbol}
           </button>
         ))}
@@ -422,7 +424,7 @@ function JoinCard({
 }) {
   const isStaked = joinPreview?.mode === "pvp_staked";
   const stake = joinPreview?.stake ?? 0;
-  const asset = joinPreview?.stakeAsset ?? "WETH";
+  const asset = joinPreview?.stakeAsset ?? "USDC";
   const winnerTakes = +(stake * 2 * 0.975).toFixed(4);
   const stale = !invitePrefill.trim() || invitePrefill.trim().length < 6;
 
@@ -497,7 +499,7 @@ function JoinPreviewBlock({ preview }: { preview: JoinPreview }) {
   const isStaked = preview.mode === "pvp_staked";
   const isCasual = preview.mode === "pvp_casual";
   const stake = preview.stake;
-  const asset = preview.stakeAsset ?? "WETH";
+  const asset = preview.stakeAsset ?? "USDC";
   const pot = stake * 2;
   const fee = +(pot * 0.025).toFixed(4);
   const winnerTakes = +(pot - fee).toFixed(4);

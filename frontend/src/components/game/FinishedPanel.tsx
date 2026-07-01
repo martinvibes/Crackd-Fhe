@@ -137,7 +137,7 @@ export function FinishedPanel({
       {won && finished.payoutAmount !== undefined && finished.payoutAmount > 0 && (
         <PayoutBanner
           payout={finished.payoutAmount}
-          asset={finished.payoutAsset ?? "WETH"}
+          asset={finished.payoutAsset ?? "USDC"}
           stake={finished.stakeAmount ?? 0}
           txHash={finished.payoutTxHash}
         />
@@ -155,7 +155,7 @@ export function FinishedPanel({
           <span className="text-fg-secondary">
             Your{" "}
             <span className="text-fg-primary font-mono">
-              {finished.stakeAmount.toFixed(2)} {finished.payoutAsset ?? "WETH"}
+              {finished.stakeAmount.toFixed(2)} {finished.payoutAsset ?? "USDC"}
             </span>{" "}
             stake stays in the vault pool.
           </span>

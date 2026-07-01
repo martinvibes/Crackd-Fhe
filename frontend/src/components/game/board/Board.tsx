@@ -15,6 +15,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { SafeGameView } from "../../../lib/socket";
 import { sounds } from "../../../lib/sounds";
+import { TokenLogo } from "../../TokenLogo";
 import { BoardHeader } from "./BoardHeader";
 import { GuessBubble } from "./GuessBubble";
 import { Composer } from "./Composer";
@@ -82,6 +83,7 @@ export function Board({
         view.stakeAmount > 0 && (
           <StakeBar
             stakeAmount={view.stakeAmount}
+            stakeAsset={view.stakeAsset}
             guessCount={view.yourGuesses.length}
           />
         )}
@@ -134,13 +136,16 @@ export function Board({
  */
 function StakeBar({
   stakeAmount,
+  stakeAsset,
   guessCount,
 }: {
+  /** Human-readable amount (already converted from base units). */
   stakeAmount: number;
+  /** Token symbol, e.g. "USDC" | "WETH" — may be null. */
+  stakeAsset: string | null;
   guessCount: number;
 }) {
-  // view.stakeAmount is in whole asset units (e.g. WETH).
-  const weth = stakeAmount;
+  const symbol = stakeAsset ?? "USDC";
   // Current tier based on guesses so far (next guess = guessCount + 1).
   const nextGuess = guessCount + 1;
   const tier =
@@ -149,7 +154,10 @@ function StakeBar({
       : nextGuess <= 5
         ? { label: "2.25×", desc: "Sharp" }
         : { label: "2×", desc: "Base win" };
-  const potentialWin = weth * (nextGuess <= 3 ? 2.5 : nextGuess <= 5 ? 2.25 : 2.0);
+  const multiplier = nextGuess <= 3 ? 2.5 : nextGuess <= 5 ? 2.25 : 2.0;
+  const potentialWin = stakeAmount * multiplier;
+  const fmt = (n: number) =>
+    Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, "");
 
   return (
     <div className="mt-4 max-w-2xl mx-auto">
@@ -158,15 +166,16 @@ function StakeBar({
         style={{
           background: "rgba(255,0,168,0.04)",
           borderColor: "rgba(255,0,168,0.2)",
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
         }}
       >
         <div className="flex items-center gap-2 text-fg-secondary">
-          <span
-            className="h-1.5 w-1.5 rounded-full"
-            style={{ background: "#FF00A8" }}
-          />
-          <span>
-            Staked <span className="text-fg-primary font-mono">{weth}</span> WETH
+          <span className="text-[10px] uppercase tracking-[0.22em] text-fg-muted">
+            Staked
+          </span>
+          <TokenLogo symbol={symbol} size={16} />
+          <span className="text-fg-primary font-mono">
+            {fmt(stakeAmount)} {symbol}
           </span>
         </div>
         <div className="flex items-center gap-3 text-fg-secondary">
@@ -176,13 +185,34 @@ function StakeBar({
           <span style={{ color: "#FF00A8" }} className="font-semibold">
             {tier.label}
           </span>
-          <span className="text-fg-muted">→</span>
-          <span className="text-fg-primary font-mono">
-            {potentialWin.toFixed(1)} WETH
+          <ArrowIcon />
+          <span className="inline-flex items-center gap-1.5 text-fg-primary font-mono">
+            <TokenLogo symbol={symbol} size={16} />
+            {fmt(potentialWin)} {symbol}
           </span>
         </div>
       </div>
     </div>
+  );
+}
+
+function ArrowIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="text-fg-muted"
+      aria-hidden
+    >
+      <path d="M5 12h14" />
+      <path d="M13 6l6 6-6 6" />
+    </svg>
   );
 }
 

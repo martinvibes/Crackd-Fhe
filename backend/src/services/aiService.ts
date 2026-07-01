@@ -39,33 +39,33 @@ export interface TauntContext {
 
 const FALLBACK_TAUNTS: Record<TauntEvent, string[]> = {
   game_start: [
-    "Omo, The Vault dey wait. Bring your best guess abeg.",
-    "See who wan try crack The Vault today? We go see.",
+    "The Vault is waiting. Bring your best guess.",
+    "So you want to crack The Vault today? We'll see about that.",
   ],
   player_bad_guess: [
-    "E be like say you dey guess with your eye closed!",
-    "Chai! That guess weak well well.",
-    "No waste my time abeg, think am proper.",
+    "Looks like you're guessing with your eyes closed.",
+    "That guess was weak. Try thinking this time.",
+    "Don't waste my time — think it through.",
   ],
   player_good_guess: [
-    "Hmm, you dey try small — but The Vault never shake.",
-    "Oya nah, at least you dey think now.",
+    "Not bad. But The Vault doesn't shake that easily.",
+    "There it is — you're finally starting to think.",
   ],
   player_cracked_code: [
-    "Congrats abeg, you crack am. But next round, The Vault go collect!",
-    "Shebi you win this one. No get mind, we go rematch.",
+    "Fine, you cracked it. Next round, The Vault collects.",
+    "You win this one. Don't get comfortable — rematch.",
   ],
   ai_good_guess: [
-    "The Vault dey cook. Your code no go last.",
-    "I dey close. Sweat am, my guy.",
+    "The Vault is closing in. Your code won't last.",
+    "I'm getting warm. Better start sweating.",
   ],
   ai_cracked_code: [
-    "Crackd! The Vault no dey miss.",
-    "I don enter your code. Try me again if you get liver.",
+    "Cracked. The Vault never misses.",
+    "I'm inside your code. Try me again if you dare.",
   ],
   player_losing: [
-    "You don use many guesses and still dey roam. Rest abeg.",
-    "Omo, time dey go. You sure say you know wetin you dey do?",
+    "All those guesses and still nowhere. Maybe sit this one out.",
+    "Clock's ticking. Are you sure you know what you're doing?",
   ],
 };
 
@@ -177,7 +177,7 @@ export class AIService {
         model: this.model,
         max_tokens: this.maxTokens,
         system:
-          "You are The Vault — an unbreakable AI code guardian in a competitive game called Crackd. You speak exclusively in West African Pidgin English. You are cocky, funny, and theatrical. Maximum 1-2 short sentences per taunt. Never break character. Never output quotes or punctuation beyond what a sentence needs.",
+          "You are The Vault — an unbreakable AI code guardian in a competitive code-breaking game called Crackd. You speak clear, natural English. You are cocky, witty, and theatrical, but never use slang or dialect. Maximum 1-2 short sentences per taunt. Never break character. Never output quotes or punctuation beyond what a sentence needs.",
         messages: [
           {
             role: "user",
@@ -285,7 +285,7 @@ function tauntUserPrompt(ctx: TauntContext): string {
   if (ctx.pansScored !== undefined) bits.push(`Pans scored: ${ctx.pansScored}.`);
   if (ctx.guessesUsed !== undefined) bits.push(`Guesses used: ${ctx.guessesUsed}.`);
   if (ctx.playerIsClose) bits.push(`Player is close to cracking.`);
-  bits.push(`Generate one taunt (Pidgin, 1-2 sentences max).`);
+  bits.push(`Generate one taunt (natural English, 1-2 sentences max).`);
   return bits.join(" ");
 }
 

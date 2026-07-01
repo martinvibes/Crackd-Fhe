@@ -45,7 +45,12 @@ const walletSchema = z
   .string()
   .regex(/^0x[0-9a-fA-F]{40}$/, "Invalid EVM address");
 
+// Set once handlers register — lets the module-level buildView() convert stake
+// base units → human amounts without threading services through every caller.
+let assetsRef: Services["assets"] | null = null;
+
 export function registerGameHandlers(io: CrackdServer, socket: CrackdSocket, services: Services) {
+  assetsRef = services.assets;
   socket.data.gameIds = new Set<string>();
   socket.data.lastChatAt = 0;
 
@@ -447,6 +452,17 @@ async function secretForOpponent(
 
 function buildView(state: GameState, slot: PlayerSlot): SafeGameView {
   const redacted = redactForPlayer(state, slot);
+  // state.stakeAmount is token base units (string). Convert to a human number
+  // using the asset's decimals so every client shows "26" not "26000000".
+  let stakeHuman = 0;
+  if (state.stakeAsset && assetsRef) {
+    try {
+      const decimals = assetsRef.get(state.stakeAsset).decimals;
+      stakeHuman = fromBaseUnits(BigInt(state.stakeAmount || "0"), decimals);
+    } catch {
+      stakeHuman = 0;
+    }
+  }
   return {
     gameId: state.gameId,
     mode: state.mode,
@@ -461,7 +477,8 @@ function buildView(state: GameState, slot: PlayerSlot): SafeGameView {
     currentTurn: state.currentTurn,
     winner: state.winner,
     isDraw: state.isDraw,
-    stakeAmount: state.stakeAmount,
+    stakeAmount: stakeHuman,
+    stakeAsset: state.stakeAsset ?? null,
     maxGuesses: state.maxGuesses,
     createdAt: state.createdAt,
     updatedAt: state.updatedAt,
