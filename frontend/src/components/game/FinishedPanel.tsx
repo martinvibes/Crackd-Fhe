@@ -7,7 +7,7 @@
  *           multiplier bonus if staked.
  *   LOSS  → "Locked out." Neutral headline. Shows which code the
  *           opponent broke + how many tries it took them. Vs-AI gets a
- *           Pidgin sting line for personality.
+ *           sting line for personality.
  *   DRAW  → "Stalemate." Neutral, symmetric — both codes shown small.
  *
  * Only wins get magenta + sparks. Losses and draws stay restrained.

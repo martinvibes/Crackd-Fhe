@@ -51,7 +51,8 @@ The feedback handles are decryptable **only by the guesser** via the relayer's u
 
 | Mode | Stakes | Players | Description |
 |------|--------|---------|-------------|
-| **vs AI · free** | None | You vs The Vault | Warm up against the Pidgin-speaking AI. No wallet needed. |
+| **Confidential Duel** | None | You vs The Vault | **The FHE showcase.** Both codes sealed on-chain as ciphertext; you and the Vault race to crack each other. Every peg scored on encrypted data. |
+| **vs AI · free** | None | You vs The Vault | Warm up against The Vault, a Claude-powered AI. No wallet needed. |
 | **vs AI · staked** | WETH or USDC | You vs The Vault | Stake to play. Win 2×–2.5× your stake from the community pool. |
 | **Multiplayer · casual** | None | 1v1 humans | Invite a friend with a 6-char code. Bragging rights only. |
 | **Multiplayer · staked** | WETH or USDC | 1v1 humans | Both escrow into the duel contract. Winner takes the pot minus a 2.5% protocol fee; draws refund both stakes. Settled atomically on-chain. |
@@ -72,15 +73,15 @@ Pool protected by a 25% daily cap per player to prevent draining.
 
 ## The Vault — AI Opponent
 
-The Vault is Crackd's AI code guardian. It speaks **West African Pidgin English**, talks trash after every guess, and plays to win.
+The Vault is Crackd's AI code guardian. It talks trash after every guess and plays to win.
 
 **How it works (hybrid AI):**
 1. **Algorithmic solver** narrows the candidate space after each guess using feedback — guarantees every AI guess is logically valid.
 2. **Claude** picks *which* valid candidate to guess from a filtered shortlist — strategic reasoning + personality.
-3. **Pidgin taunts** generated per-event by Claude — context-aware, never breaks character.
+3. **Taunts** generated per-event by Claude in natural English — context-aware, reacts to how close your guess landed.
 
-> *"E be like say you dey guess with your eye closed!"*
-> — The Vault, after a player's bad guess
+> *"One digit off. So close it hurts."*
+> — The Vault, after a near-miss
 
 ---
 
@@ -97,32 +98,40 @@ This is genuinely non-trivial FHE — not a confidential-ERC20 clone. The test s
 
 ## Confidential mode — the showcase (`/confidential`)
 
-The headline feature lives at **`/confidential`**. It exercises `CrackdFHE`
-end-to-end against real Sepolia transactions:
+The headline feature lives at **`/confidential`**: a **two-sided duel** where
+both codes are sealed on-chain and you and the Vault race to crack each other.
+It exercises `CrackdFHE` end-to-end against real Sepolia transactions, on the
+**exact same board UI** as the classic game — the confidentiality just happens
+underneath.
 
-1. **Seal** — you pick a 4-digit code; it's encrypted to `euint8[4]` in your
-   browser and committed with `createGame()`. The code is ciphertext on-chain.
-2. **Crack** — The Vault (a client-side solver) proposes guesses; each is sent
-   to `submitGuess()`, where the **contract scores the POT/PAN pegs on the
-   encrypted code**. The encrypted result is decrypted only for you via the
-   relayer, then fed back to the solver.
-3. **Result** — the Vault cracks it or runs out of guesses. Throughout, your
-   digits never appear on-chain in the clear — every scoring tx is linkable on
-   Etherscan, and none of them reveal the code.
-
-The page includes a side-by-side **"normal game leaks vs. Crackd Confidential
-stays sealed"** panel and a plain-English "under the hood" breakdown — built for
-judges to grok the FHE property in ten seconds.
+1. **Both seal** — the Vault's code is sealed on-chain (`createGame`, ciphertext
+   `euint8[4]`); then you pick your own 4-digit code and seal it the same way
+   from your wallet. Neither code is ever on-chain in the clear.
+2. **Alternate turns** — each of your guesses is sent to `submitGuess()`, where
+   the **contract scores the POT/PAN pegs on the Vault's encrypted code**; the
+   encrypted pegs are decrypted only for you via the relayer. Then the Vault
+   takes its turn, guessing against **your** sealed code the same way (a chat-
+   style "Vault is typing…" bubble shows while it computes on-chain).
+3. **Decrypt anytime** — a **"Decrypt my code"** button reads your sealed code
+   back from chain as ciphertext and user-decrypts it via the relayer, proving
+   the digits lived encrypted the whole time (only you hold the ACL).
+4. **Result** — first to crack the other wins (within 10 guesses). The outcome
+   is recorded to the leaderboard + player stats, with the win **verified
+   server-side** against the Vault's code so it can't be spoofed. Every scoring
+   tx is linkable on Etherscan, and none of them reveal a code.
 
 ### Demo script (90 seconds)
 
-1. Open `/confidential`, connect a wallet on Sepolia.
-2. Set a code (e.g. `5 8 3 1`) → **Seal on-chain**. Open the sealing tx on
-   Etherscan — show that the stored input is ciphertext, not the digits.
-3. Click **Score this guess on-chain** a few times. Each tx scores on the
-   encrypted code; the pegs (● POT / ○ PAN) come back decrypted just for you.
-4. Punchline: "The guesses and pegs are public. The code never was — not to the
-   opponent, not to the server, not to the chain itself."
+1. Open `/confidential`, sign in with a wallet on Sepolia, hit **Start the duel**.
+2. Set your code (e.g. `5 8 3 1`) → **Lock code**. Open the sealing tx on
+   Etherscan — show the stored input is ciphertext, not the digits.
+3. Trade a few guesses with the Vault. Each of your guesses is a tx that scores
+   on the encrypted code; the pegs (● POT / ○ PAN) come back decrypted just for
+   you. Watch the Vault "type" while it computes its guess on-chain.
+4. Hit **Decrypt my code** — your sealed digits are pulled from chain and
+   decrypted live.
+5. Punchline: "The guesses and pegs are public. Neither code ever was — not to
+   the opponent, not to the server, not to the chain itself."
 
 ## Architecture
 
@@ -165,6 +174,18 @@ judges to grok the FHE property in ten seconds.
 Contracts inherit `ZamaEthereumConfig` (`@fhevm/solidity`), which wires the ACL / coprocessor / KMS addresses for Ethereum mainnet and Sepolia. See [`contracts/README.md`](contracts/README.md) for the full contract docs.
 
 **Contract test coverage:** Hardhat suite covering the escrow flow (create → join → declare, fee math, refunds, min-stake) and the FHE peg engine (exact crack, frequency-capped white pegs, no duplicate over-count) against the mock coprocessor.
+
+### Live on Sepolia
+
+All contracts are deployed and verifiable on Ethereum Sepolia:
+
+| Contract | Address |
+|----------|---------|
+| **CrackdFHE** (confidential engine) | [`0x9A050f34B461D984ca227874265Bc2969024257a`](https://sepolia.etherscan.io/address/0x9A050f34B461D984ca227874265Bc2969024257a) |
+| **CrackdVault** (prize pool) | [`0x7F0C85EC12dcE17Bf7eEaf1A6E79589497E73F2E`](https://sepolia.etherscan.io/address/0x7F0C85EC12dcE17Bf7eEaf1A6E79589497E73F2E) |
+| **CrackdDuel** (PvP escrow) | [`0xd6bA0ae6A7064CB34075f934cC5EF9d26613CF80`](https://sepolia.etherscan.io/address/0xd6bA0ae6A7064CB34075f934cC5EF9d26613CF80) |
+
+Open **CrackdFHE** on Etherscan and inspect any `submitGuess` tx — the guess is plaintext, the stored code is ciphertext, and the returned pegs are encrypted handles. That's the whole thesis, on a public explorer.
 
 ### Backend Services
 

@@ -609,7 +609,7 @@ async function resolveFinished(
 
 /**
  * vs-AI follow-up: The Vault takes its turn against the human's code,
- * then fires a Pidgin taunt. Fires a short think-time delay so the
+ * then fires a taunt. Fires a short think-time delay so the
  * frontend can render the "opponent's turn" state — makes the back-and-
  * forth feel like an actual match, not instant pong.
  */
@@ -656,7 +656,7 @@ async function takeAiTurn(
         ? "ai_good_guess"
         : "player_bad_guess";
   void services.ai
-    .getPidginTrashTalk({
+    .getTrashTalk({
       event: tauntEvent,
       potsScored: result.pots,
       pansScored: result.pans,

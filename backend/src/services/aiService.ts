@@ -1,10 +1,10 @@
 /**
- * The Vault — Claude-powered AI opponent and Pidgin trash-talker.
+ * The Vault — Claude-powered AI opponent and trash-talker.
  *
  * Split into two responsibilities:
  *  - guessing: picks the AI's next guess by feeding Claude the elimination
  *    state so far.
- *  - trash talk: produces a short Pidgin taunt keyed on the current game
+ *  - trash talk: produces a short English taunt keyed on the current game
  *    event. Kept terse and stateless so it's cheap and cacheable.
  *
  * All calls go through a single Anthropic client instance with sensible
@@ -18,7 +18,7 @@ import { CODE_LENGTH, computeGuessResult, validateCode } from "./gameLogic.js";
 import type { Guess, GuessResult } from "../types/game.js";
 import { logger } from "../utils/logger.js";
 
-// ---------------- Pidgin trash talk ----------------
+// ---------------- Trash talk ----------------
 
 export type TauntEvent =
   | "game_start"
@@ -164,10 +164,10 @@ export class AIService {
   }
 
   /**
-   * Get a short Pidgin taunt for a game event. Falls back to a hardcoded
+   * Get a short English taunt for a game event. Falls back to a hardcoded
    * canned line if Claude is unavailable or slow.
    */
-  async getPidginTrashTalk(ctx: TauntContext): Promise<string> {
+  async getTrashTalk(ctx: TauntContext): Promise<string> {
     const fallbacks = FALLBACK_TAUNTS[ctx.event];
     const fallback = fallbacks[Math.floor(Math.random() * fallbacks.length)]!;
     if (!this.client) return fallback;
