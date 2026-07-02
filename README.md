@@ -14,6 +14,10 @@
   <img src="https://img.shields.io/badge/License-MIT-green" />
 </p>
 
+<p align="center">
+  <strong>Live demo:</strong> <em>_add your Vercel URL here_</em> · Deploy your own in ~15 min → <a href="DEPLOY.md">DEPLOY.md</a>
+</p>
+
 ---
 
 ## What is Crackd Confidential?
@@ -263,6 +267,11 @@ cd frontend && npm run dev       # Terminal 3
 ```
 
 Open `http://localhost:5173` — you're live.
+
+### Deploying to production
+
+Frontend → Vercel, backend → Railway, contracts → verified on Etherscan.
+Step-by-step (env vars, Redis, CORS wiring) in **[DEPLOY.md](DEPLOY.md)**.
 
 ---
 

@@ -4,6 +4,7 @@ import "@nomicfoundation/hardhat-chai-matchers";
 import "@nomicfoundation/hardhat-network-helpers";
 import "@typechain/hardhat";
 import "@fhevm/hardhat-plugin";
+import "@nomicfoundation/hardhat-verify";
 import * as dotenv from "dotenv";
 
 dotenv.config();
@@ -32,6 +33,15 @@ const config: HardhatUserConfig = {
       // lightly-funded deployer. Override with GAS_PRICE_GWEI if Sepolia spikes.
       gasPrice: Math.round(Number(process.env.GAS_PRICE_GWEI || "55") * 1e9),
     },
+  },
+  // `npx hardhat verify --network sepolia <address> [constructorArgs...]`
+  // publishes the Solidity source to Etherscan so anyone can read the FHE
+  // engine computing POT/PAN on ciphertext. Needs ETHERSCAN_API_KEY.
+  etherscan: {
+    apiKey: process.env.ETHERSCAN_API_KEY || "",
+  },
+  sourcify: {
+    enabled: false,
   },
 };
 
