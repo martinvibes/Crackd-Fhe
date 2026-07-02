@@ -115,6 +115,16 @@ export const api = {
       `/api/confidential/vault-guess`,
       { method: "POST", body: JSON.stringify({ playerGameId, history }) },
     ),
+  confidentialResult: (args: {
+    walletAddress: string;
+    vaultGameId: string;
+    outcome: "cracked" | "failed" | "draw";
+    winningGuess?: string;
+  }) =>
+    j<{ ok: boolean; recorded: boolean }>(`/api/confidential/result`, {
+      method: "POST",
+      body: JSON.stringify(args),
+    }),
   setAvatar: (wallet: string, imageDataUrl: string) =>
     j<{ ok: boolean }>(`/api/player/${wallet}/avatar`, {
       method: "PUT",

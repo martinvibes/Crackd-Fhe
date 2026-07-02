@@ -62,10 +62,33 @@ function Game({ address }: { address: string }) {
   const [taunt, setTaunt] = useState<string | null>(null);
   const [vaultThinking, setVaultThinking] = useState(false);
 
+  const qc = useQueryClient();
+
   const getSigner = useCallback(async (): Promise<Signer> => {
     const provider = await getActiveProvider();
     return provider.getSigner();
   }, []);
+
+  // Record the finished duel into the leaderboard + player stats (same place
+  // the classic modes count). Best-effort — a failed report never blocks the
+  // finish screen. A win is verified server-side against the Vault's code.
+  const reportResult = useCallback(
+    async (outcome: "cracked" | "failed" | "draw", winningGuess?: string) => {
+      try {
+        await api.confidentialResult({
+          walletAddress: address,
+          vaultGameId,
+          outcome,
+          winningGuess,
+        });
+        qc.invalidateQueries({ queryKey: ["player", address] });
+        qc.invalidateQueries({ queryKey: ["leaderboard"] });
+      } catch {
+        /* leaderboard is best-effort */
+      }
+    },
+    [address, vaultGameId, qc],
+  );
 
   // Start: the backend seals a fresh Vault code on-chain. You then set + seal
   // your own code in the board's "setting_codes" step.
@@ -146,6 +169,7 @@ function Game({ address }: { address: string }) {
         if (yr.solved || yr.pots === 4) {
           setResult("cracked");
           setPhase("finished");
+          void reportResult("cracked", code);
           return { ok: true };
         }
 
@@ -173,11 +197,13 @@ function Game({ address }: { address: string }) {
         if (vg.solved || vg.pots === 4) {
           setResult("failed");
           setPhase("finished");
+          void reportResult("failed");
           return { ok: true };
         }
         if (myNext.length >= MAX_GUESSES) {
           setResult("draw");
           setPhase("finished");
+          void reportResult("draw");
           return { ok: true };
         }
         setCurrentTurn("you");
@@ -188,7 +214,7 @@ function Game({ address }: { address: string }) {
         return { ok: false, error: friendly(e) };
       }
     },
-    [vaultGameId, playerGameId, yourGuesses, vaultGuesses, getSigner],
+    [vaultGameId, playerGameId, yourGuesses, vaultGuesses, getSigner, reportResult],
   );
 
   // Synthetic view so we can reuse the exact normal-game Board.
